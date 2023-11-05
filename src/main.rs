@@ -11,7 +11,7 @@ use ratatui::{
 };
 use std::io::{stdout, Result};
 
-fn create_text<'a>(text: &str, padding: Vec<u16>) -> Paragraph<'_> {
+fn create_text(text: &str, padding: Vec<u16>) -> Paragraph<'_> {
     Paragraph::new(text)
         .block(
             Block::new()
@@ -33,6 +33,7 @@ fn ui(f: &mut Frame) {
         .split(f.size());
     let request_layout = Layout::default()
         .direction(Direction::Vertical)
+        .horizontal_margin(1)
         .constraints([Constraint::Percentage(7), Constraint::Percentage(93)])
         .split(main_layout[0]);
     let response_layout = Layout::default()
