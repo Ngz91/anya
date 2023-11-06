@@ -4,11 +4,12 @@ use crossterm::{
     ExecutableCommand,
 };
 use ratatui::{
-    prelude::{Constraint, CrosstermBackend, Direction, Layout, Terminal},
+    prelude::{Constraint, CrosstermBackend, Direction, Layout, Terminal, Rect},
     style::{Color, Style, Stylize},
     widgets::{Block, Borders, Padding, Paragraph, Wrap},
     Frame,
 };
+use std::rc;
 use std::io::{stdout, Result};
 
 fn create_text(text: &str, padding: Vec<u16>) -> Paragraph<'_> {
@@ -41,9 +42,6 @@ fn ui(f: &mut Frame) {
         .constraints([Constraint::Percentage(100)])
         .split(main_layout[1]);
 
-    let p = create_text("Json for request here (If needed)", vec![2, 2, 2, 2]);
-    let r = create_text("{Something: test}", vec![2, 2, 1, 2]);
-    let url = create_text("https://test.com/api", vec![2, 1, 1, 1]);
     f.render_widget(
         Block::default()
             .borders(Borders::all())
@@ -65,10 +63,26 @@ fn ui(f: &mut Frame) {
             .title("Response"),
         response_layout[0],
     );
+}
 
-    f.render_widget(url, request_layout[0]);
-    f.render_widget(p, request_layout[1]);
-    f.render_widget(r, response_layout[0])
+fn render_response_text(f: &mut Frame, area: rc::Rc<[Rect]>) {
+    let test_response = test_get_client().unwrap();
+    let binding = test_response.to_string();
+
+    let r = create_text(&binding, vec![2, 2, 1, 2]);
+    f.render_widget(r, area[0])
+}
+
+#[tokio::main]
+async fn test_get_client() -> std::result::Result<serde_json::Value, reqwest::Error> {
+    let client = reqwest::Client::new();
+    let resp = client
+        .get("https://httpbin.org/get")
+        .send()
+        .await?
+        .json::<serde_json::Value>()
+        .await?;
+    Ok(resp)
 }
 
 fn main() -> Result<()> {
