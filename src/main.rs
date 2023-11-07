@@ -4,14 +4,13 @@ use crossterm::{
     ExecutableCommand,
 };
 use ratatui::{
-    prelude::{Constraint, CrosstermBackend, Direction, Layout, Rect, Terminal},
+    prelude::{Constraint, CrosstermBackend, Direction, Layout, Terminal},
     style::{Color, Style, Stylize},
     widgets::{Block, Borders, Padding, Paragraph, Wrap},
     Frame,
 };
 use std::{
     io::{stdout, Result},
-    rc::Rc,
 };
 
 struct App {
