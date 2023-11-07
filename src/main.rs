@@ -14,13 +14,13 @@ use std::{
     rc::Rc,
 };
 
-struct App<'a> {
-    request: Option<&'a str>,
-    response: Option<&'a str>,
+struct App {
+    request: Option<serde_json::Value>,
+    response: Option<serde_json::Value>,
 }
 
-impl<'a> App<'a> {
-    fn new(request: Option<&'a str>, response: Option<&'a str>) -> Self {
+impl App {
+    fn new(request: Option<serde_json::Value>, response: Option<serde_json::Value>) -> Self {
         Self { request, response }
     }
 
@@ -60,10 +60,15 @@ impl<'a> App<'a> {
                 .title("Response"),
             response_layout[0],
         );
+
+        if self.response.is_some() {
+            let r = create_text("Got a response, add response here", vec![2, 2, 1, 2]);
+            f.render_widget(r, response_layout[0])
+        }
     }
 
     #[tokio::main]
-    async fn test_get_client(&self) -> std::result::Result<std::string::String, reqwest::Error> {
+    async fn test_get_client(&mut self) -> std::result::Result<(), reqwest::Error> {
         let client = reqwest::Client::new();
         let resp = client
             .get("https://httpbin.org/get")
@@ -71,7 +76,14 @@ impl<'a> App<'a> {
             .await?
             .json::<serde_json::Value>()
             .await?;
-        Ok(resp.to_string())
+        self.store_response(Ok(&resp));
+        Ok(())
+    }
+
+    fn store_response(&mut self, response: std::result::Result<&serde_json::Value, reqwest::Error>) {
+        if let Ok(response) = response {
+            self.response = Some(response.clone())
+        }
     }
 }
 
@@ -96,7 +108,7 @@ fn main() -> Result<()> {
     let mut terminal = Terminal::new(CrosstermBackend::new(stdout()))?;
     terminal.clear()?;
 
-    let app = App::new(None, None);
+    let mut app = App::new(None, None);
 
     loop {
         terminal.draw(|f| app.render_ui(f))?;
@@ -104,6 +116,9 @@ fn main() -> Result<()> {
             if let event::Event::Key(key) = event::read()? {
                 if key.kind == KeyEventKind::Press && key.code == KeyCode::Char('q') {
                     break;
+                }
+                else if key.kind == KeyEventKind::Press && key.code == KeyCode::Char('t') {
+                    app.test_get_client();
                 }
             }
         }
