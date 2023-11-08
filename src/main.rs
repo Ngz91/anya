@@ -9,9 +9,7 @@ use ratatui::{
     widgets::{Block, Borders, Padding, Paragraph, Wrap},
     Frame,
 };
-use std::{
-    io::{stdout, Result},
-};
+use std::io::{stdout, Result};
 
 struct App {
     request: Option<serde_json::Value>,
@@ -67,19 +65,20 @@ impl App {
     }
 
     #[tokio::main]
-    async fn test_get_client(&mut self) -> std::result::Result<(), reqwest::Error> {
-        let client = reqwest::Client::new();
+    async fn get_response(
+        &mut self,
+        client: &reqwest::Client,
+    ) -> std::result::Result<serde_json::Value, reqwest::Error> {
         let resp = client
             .get("https://httpbin.org/get")
             .send()
             .await?
             .json::<serde_json::Value>()
             .await?;
-        self.store_response(Ok(&resp));
-        Ok(())
+        Ok(resp)
     }
 
-    fn store_response(&mut self, response: std::result::Result<&serde_json::Value, reqwest::Error>) {
+    fn set_response(&mut self, response: std::result::Result<serde_json::Value, reqwest::Error>) {
         if let Ok(response) = response {
             self.response = Some(response.clone())
         }
@@ -108,6 +107,7 @@ fn main() -> Result<()> {
     terminal.clear()?;
 
     let mut app = App::new(None, None);
+    let client = reqwest::Client::new();
 
     loop {
         terminal.draw(|f| app.render_ui(f))?;
@@ -115,9 +115,9 @@ fn main() -> Result<()> {
             if let event::Event::Key(key) = event::read()? {
                 if key.kind == KeyEventKind::Press && key.code == KeyCode::Char('q') {
                     break;
-                }
-                else if key.kind == KeyEventKind::Press && key.code == KeyCode::Char('t') {
-                    app.test_get_client();
+                } else if key.kind == KeyEventKind::Press && key.code == KeyCode::Char('t') {
+                    let resp = app.get_response(&client);
+                    app.set_response(resp)
                 }
             }
         }
