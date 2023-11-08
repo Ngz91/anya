@@ -58,8 +58,9 @@ impl App {
             response_layout[0],
         );
 
-        if self.response.is_some() {
-            let r = create_text("Got a response, add response here", vec![2, 2, 1, 2]);
+        if let Some(resp) = &self.response {
+            let resp = resp.to_string();
+            let r = create_text(&resp, vec![2, 2, 1, 2]);
             f.render_widget(r, response_layout[0])
         }
     }
@@ -70,7 +71,7 @@ impl App {
         client: &reqwest::Client,
     ) -> std::result::Result<serde_json::Value, reqwest::Error> {
         let resp = client
-            .get("https://httpbin.org/get")
+            .get("https://httpbin.org/get") // TODO: Add here the request url that comes from the request text are (Not yet implemented)
             .send()
             .await?
             .json::<serde_json::Value>()
