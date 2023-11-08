@@ -80,8 +80,8 @@ impl App {
     }
 
     fn set_response(&mut self, response: std::result::Result<serde_json::Value, reqwest::Error>) {
-        if let Ok(response) = response {
-            self.response = Some(response.clone())
+        if let Ok(resp) = response {
+            self.response = Some(resp)
         }
     }
 }
