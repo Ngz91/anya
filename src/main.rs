@@ -59,7 +59,7 @@ impl App {
         );
 
         if let Some(resp) = &self.response {
-            let resp = resp.to_string();
+            let resp = serde_json::to_string(resp).unwrap();
             let r = create_text(&resp, vec![2, 2, 1, 2]);
             f.render_widget(r, response_layout[0])
         }
