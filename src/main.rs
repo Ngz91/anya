@@ -59,7 +59,7 @@ impl App {
         );
 
         if let Some(resp) = &self.response {
-            let resp = serde_json::to_string(resp).unwrap();
+            let resp = serde_json::to_string_pretty(resp).unwrap();
             let r = create_text(&resp, vec![2, 2, 1, 2]);
             f.render_widget(r, response_layout[0])
         }
@@ -116,7 +116,7 @@ fn main() -> Result<()> {
             if let event::Event::Key(key) = event::read()? {
                 if key.kind == KeyEventKind::Press && key.code == KeyCode::Char('q') {
                     break;
-                } else if key.kind == KeyEventKind::Press && key.code == KeyCode::Char('t') {
+                } else if key.kind == KeyEventKind::Press && key.code == KeyCode::Char('g') {
                     let resp = app.get_response(&client);
                     app.set_response(resp)
                 }
