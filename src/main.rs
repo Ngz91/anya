@@ -11,16 +11,13 @@ use ratatui::{
 };
 use std::io::{stdout, Result};
 
+#[derive(Default)]
 struct App {
     request: Option<serde_json::Value>,
     response: Option<serde_json::Value>,
 }
 
 impl App {
-    fn new(request: Option<serde_json::Value>, response: Option<serde_json::Value>) -> Self {
-        Self { request, response }
-    }
-
     fn render_ui(&self, f: &mut Frame) {
         let main_layout = Layout::default()
             .direction(Direction::Horizontal)
@@ -40,21 +37,24 @@ impl App {
             Block::default()
                 .borders(Borders::all())
                 .blue()
-                .title("Request Url"),
+                .title("Request Url")
+                .bold(),
             request_layout[0],
         );
         f.render_widget(
             Block::default()
                 .borders(Borders::all())
                 .blue()
-                .title("Json"),
+                .title("Json")
+                .bold(),
             request_layout[1],
         );
         f.render_widget(
             Block::default()
                 .borders(Borders::all())
                 .green()
-                .title("Response"),
+                .title("Response")
+                .bold(),
             response_layout[0],
         );
 
@@ -71,7 +71,7 @@ impl App {
         client: &reqwest::Client,
     ) -> std::result::Result<serde_json::Value, reqwest::Error> {
         let resp = client
-            .get("https://httpbin.org/get") // TODO: Add here the request url that comes from the request text are (Not yet implemented)
+            .get("https://httpbin.org/get") // TODO: Add here the request url that comes from the request text url (Not yet implemented)
             .send()
             .await?
             .json::<serde_json::Value>()
@@ -107,7 +107,7 @@ fn main() -> Result<()> {
     let mut terminal = Terminal::new(CrosstermBackend::new(stdout()))?;
     terminal.clear()?;
 
-    let mut app = App::new(None, None);
+    let mut app = App::default();
     let client = reqwest::Client::new();
 
     loop {
