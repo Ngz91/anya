@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use crossterm::{
     event::{self, KeyCode, KeyEventKind},
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
@@ -9,7 +11,13 @@ use ratatui::{
     widgets::{Block, Borders, Padding, Paragraph, Wrap},
     Frame,
 };
+use ratatui_textarea::TextArea;
 use std::io::{stdout, Result};
+
+enum InputMode {
+    Normal,
+    Editing
+}
 
 #[derive(Default)]
 struct App {
@@ -19,6 +27,15 @@ struct App {
 
 impl App {
     fn render_ui(&self, f: &mut Frame) {
+        let mut request_textarea = TextArea::default();
+        request_textarea.set_block(
+            Block::default()
+                .borders(Borders::ALL)
+                .title("Request Url")
+                .bold()
+                .blue(),
+        );
+
         let main_layout = Layout::default()
             .direction(Direction::Horizontal)
             .constraints([Constraint::Percentage(50), Constraint::Percentage(50)])
@@ -33,14 +50,7 @@ impl App {
             .constraints([Constraint::Percentage(100)])
             .split(main_layout[1]);
 
-        f.render_widget(
-            Block::default()
-                .borders(Borders::all())
-                .blue()
-                .title("Request Url")
-                .bold(),
-            request_layout[0],
-        );
+        f.render_widget(request_textarea.widget(), request_layout[0]);
         f.render_widget(
             Block::default()
                 .borders(Borders::all())
@@ -114,7 +124,7 @@ fn main() -> Result<()> {
         terminal.draw(|f| app.render_ui(f))?;
         if event::poll(std::time::Duration::from_millis(16))? {
             if let event::Event::Key(key) = event::read()? {
-                if key.kind == KeyEventKind::Press && key.code == KeyCode::Char('q') {
+                if key.kind == KeyEventKind::Press && key.code == KeyCode::Esc {
                     break;
                 } else if key.kind == KeyEventKind::Press && key.code == KeyCode::Char('g') {
                     let resp = app.get_response(&client);

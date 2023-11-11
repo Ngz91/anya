@@ -41,6 +41,7 @@ version = "0.1.0"
 dependencies = [
  "crossterm",
  "ratatui",
+ "ratatui-textarea",
  "reqwest",
  "serde",
  "serde_json",
@@ -690,6 +691,16 @@ dependencies = [
  "strum",
  "unicode-segmentation",
  "unicode-width",
+]
+
+[[package]]
+name = "ratatui-textarea"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "34d1b2612ef92d22d219e3f12dd6fef2c936b90150652f5ff7eaaa35ec3a5c77"
+dependencies = [
+ "crossterm",
+ "ratatui",
 ]
 
 [[package]]
