@@ -1,12 +1,11 @@
 use ratatui::{
-    prelude::{Constraint, Direction, Layout, Rect},
     style::{Color, Style, Stylize},
     widgets::{Block, Borders, Padding, Paragraph, Wrap},
     Frame,
 };
 use ratatui_textarea::TextArea;
 
-use std::rc::Rc;
+use crate::MainLayout;
 
 fn create_text(text: &str, padding: Vec<u16>) -> Paragraph<'_> {
     Paragraph::new(text)
@@ -26,35 +25,6 @@ fn create_text(text: &str, padding: Vec<u16>) -> Paragraph<'_> {
 enum InputMode {
     Normal,
     Editing,
-}
-
-pub struct MainLayout {
-    main_layout: Rc<[Rect]>,
-    request_layout: Rc<[Rect]>,
-    response_layout: Rc<[Rect]>,
-}
-
-impl MainLayout {
-    pub fn new(f: &mut Frame) -> Self {
-        let main_layout = Layout::default()
-            .direction(Direction::Horizontal)
-            .constraints([Constraint::Percentage(50), Constraint::Percentage(50)])
-            .split(f.size());
-        let request_layout = Layout::default()
-            .direction(Direction::Vertical)
-            .horizontal_margin(1)
-            .constraints([Constraint::Percentage(7), Constraint::Percentage(93)])
-            .split(main_layout[0]);
-        let response_layout = Layout::default()
-            .direction(Direction::Vertical)
-            .constraints([Constraint::Percentage(100)])
-            .split(main_layout[1]);
-        MainLayout {
-            main_layout,
-            request_layout,
-            response_layout,
-        }
-    }
 }
 
 pub struct App {

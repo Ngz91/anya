@@ -1,6 +1,5 @@
 #![allow(dead_code)]
 
-use app::MainLayout;
 use crossterm::{
     event::{self, KeyCode, KeyEventKind},
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
@@ -10,6 +9,9 @@ use ratatui::prelude::{CrosstermBackend, Terminal};
 use std::io::{stdout, Result};
 
 pub mod app;
+pub mod layout;
+
+use crate::layout::MainLayout;
 
 fn main() -> Result<()> {
     stdout().execute(EnterAlternateScreen)?;
