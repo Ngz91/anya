@@ -1,5 +1,6 @@
 #![allow(dead_code)]
 
+use app::MainLayout;
 use crossterm::{
     event::{self, KeyCode, KeyEventKind},
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
@@ -20,7 +21,10 @@ fn main() -> Result<()> {
     let client = reqwest::Client::new();
 
     loop {
-        terminal.draw(|f| app.render_ui(f))?;
+        terminal.draw(|f| {
+            let layout = MainLayout::new(f);
+            app.render_ui(f, &layout);
+        })?;
         if event::poll(std::time::Duration::from_millis(16))? {
             if let event::Event::Key(key) = event::read()? {
                 if key.kind == KeyEventKind::Press && key.code == KeyCode::Esc {

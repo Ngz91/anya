@@ -1,10 +1,12 @@
 use ratatui::{
-    prelude::{Constraint, Direction, Layout},
+    prelude::{Constraint, Direction, Layout, Rect},
     style::{Color, Style, Stylize},
     widgets::{Block, Borders, Padding, Paragraph, Wrap},
     Frame,
 };
 use ratatui_textarea::TextArea;
+
+use std::rc::Rc;
 
 fn create_text(text: &str, padding: Vec<u16>) -> Paragraph<'_> {
     Paragraph::new(text)
@@ -26,6 +28,35 @@ enum InputMode {
     Editing,
 }
 
+pub struct MainLayout {
+    main_layout: Rc<[Rect]>,
+    request_layout: Rc<[Rect]>,
+    response_layout: Rc<[Rect]>,
+}
+
+impl MainLayout {
+    pub fn new(f: &mut Frame) -> Self {
+        let main_layout = Layout::default()
+            .direction(Direction::Horizontal)
+            .constraints([Constraint::Percentage(50), Constraint::Percentage(50)])
+            .split(f.size());
+        let request_layout = Layout::default()
+            .direction(Direction::Vertical)
+            .horizontal_margin(1)
+            .constraints([Constraint::Percentage(7), Constraint::Percentage(93)])
+            .split(main_layout[0]);
+        let response_layout = Layout::default()
+            .direction(Direction::Vertical)
+            .constraints([Constraint::Percentage(100)])
+            .split(main_layout[1]);
+        MainLayout {
+            main_layout,
+            request_layout,
+            response_layout,
+        }
+    }
+}
+
 pub struct App {
     input_mode: InputMode,
     request: String,
@@ -45,7 +76,7 @@ impl Default for App {
 }
 
 impl App {
-    pub fn render_ui(&self, f: &mut Frame) {
+    pub fn render_ui(&self, f: &mut Frame, layout: &MainLayout) {
         let mut request_textarea = TextArea::default();
         request_textarea.set_block(
             Block::default()
@@ -55,28 +86,14 @@ impl App {
                 .blue(),
         );
 
-        let main_layout = Layout::default()
-            .direction(Direction::Horizontal)
-            .constraints([Constraint::Percentage(50), Constraint::Percentage(50)])
-            .split(f.size());
-        let request_layout = Layout::default()
-            .direction(Direction::Vertical)
-            .horizontal_margin(1)
-            .constraints([Constraint::Percentage(7), Constraint::Percentage(93)])
-            .split(main_layout[0]);
-        let response_layout = Layout::default()
-            .direction(Direction::Vertical)
-            .constraints([Constraint::Percentage(100)])
-            .split(main_layout[1]);
-
-        f.render_widget(request_textarea.widget(), request_layout[0]);
+        f.render_widget(request_textarea.widget(), layout.request_layout[0]);
         f.render_widget(
             Block::default()
                 .borders(Borders::all())
                 .blue()
                 .title("Json")
                 .bold(),
-            request_layout[1],
+            layout.request_layout[1],
         );
         f.render_widget(
             Block::default()
@@ -84,13 +101,13 @@ impl App {
                 .green()
                 .title("Response")
                 .bold(),
-            response_layout[0],
+            layout.response_layout[0],
         );
 
         if let Some(resp) = &self.response {
             let resp = serde_json::to_string_pretty(resp).unwrap();
             let r = create_text(&resp, vec![2, 2, 1, 2]);
-            f.render_widget(r, response_layout[0])
+            f.render_widget(r, layout.response_layout[0])
         }
     }
 
