@@ -1,23 +1,24 @@
 #![allow(dead_code)]
 
 use crossterm::{
-    event::{self, KeyCode, KeyEventKind},
+    event::{self, DisableMouseCapture, EnableMouseCapture, KeyCode, KeyEventKind},
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
-    ExecutableCommand,
 };
 use ratatui::prelude::{CrosstermBackend, Terminal};
-use std::io::{stdout, Result};
+use std::io;
 
 pub mod app;
 pub mod layout;
 
 use crate::layout::MainLayout;
 
-fn main() -> Result<()> {
-    stdout().execute(EnterAlternateScreen)?;
+fn main() -> std::io::Result<()> {
+    let stdout = io::stdout();
+    let mut stdout = stdout.lock();
     enable_raw_mode()?;
-    let mut terminal = Terminal::new(CrosstermBackend::new(stdout()))?;
-    terminal.clear()?;
+    crossterm::execute!(stdout, EnterAlternateScreen, EnableMouseCapture)?;
+    let backend = CrosstermBackend::new(stdout);
+    let mut terminal = Terminal::new(backend)?;
 
     let mut app = app::App::default();
     let client = reqwest::Client::new();
@@ -39,7 +40,12 @@ fn main() -> Result<()> {
         }
     }
 
-    stdout().execute(LeaveAlternateScreen)?;
     disable_raw_mode()?;
+    crossterm::execute!(
+        terminal.backend_mut(),
+        LeaveAlternateScreen,
+        DisableMouseCapture,
+    )?;
+    terminal.show_cursor()?;
     Ok(())
 }
