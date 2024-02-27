@@ -49,10 +49,10 @@ fn main() -> std::io::Result<()> {
                 ctrl: true,
                 ..
             } => {
-                todo!()
+                app.handle_textarea_events();
             }
-            _input => {
-                todo!()
+            input => {
+                app.handle_inputs(input);
             }
         }
     }
