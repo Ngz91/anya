@@ -22,49 +22,43 @@ fn create_text(text: &str, padding: Vec<u16>) -> Paragraph<'_> {
         .wrap(Wrap { trim: true })
 }
 
-enum InputMode {
-    Normal,
-    Editing,
-}
-
-pub struct App {
-    input_mode: InputMode,
+pub struct App<'a> {
     request: String,
     body_json: String,
     response: Option<serde_json::Value>,
+    textarea: [TextArea<'a>; 2],
 }
 
-impl Default for App {
+impl Default for App<'_> {
     fn default() -> Self {
         App {
-            input_mode: InputMode::Normal,
             request: String::new(),
             body_json: String::new(),
             response: None,
+            textarea: [TextArea::default(), TextArea::default()]
         }
     }
 }
 
-impl App {
-    pub fn render_ui(&self, f: &mut Frame, layout: &MainLayout) {
-        let mut request_textarea = TextArea::default();
-        request_textarea.set_block(
+impl App<'_> {
+    pub fn render_ui(&mut self, f: &mut Frame, layout: &MainLayout) {
+        self.textarea[0].set_block(
             Block::default()
                 .borders(Borders::ALL)
                 .title("Request Url")
                 .bold()
                 .blue(),
         );
-
-        f.render_widget(request_textarea.widget(), layout.request_layout[0]);
-        f.render_widget(
+        self.textarea[1].set_block(
             Block::default()
                 .borders(Borders::all())
                 .blue()
                 .title("Json")
                 .bold(),
-            layout.request_layout[1],
         );
+
+        f.render_widget(self.textarea[0].widget(), layout.request_layout[0]);
+        f.render_widget(self.textarea[1].widget(), layout.request_layout[1]);
         f.render_widget(
             Block::default()
                 .borders(Borders::all())

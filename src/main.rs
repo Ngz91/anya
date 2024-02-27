@@ -5,6 +5,7 @@ use crossterm::{
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
 use ratatui::prelude::{CrosstermBackend, Terminal};
+use ratatui_textarea::{Input, Key};
 use std::io;
 
 pub mod app;
@@ -28,14 +29,19 @@ fn main() -> std::io::Result<()> {
             let layout = MainLayout::new(f);
             app.render_ui(f, &layout);
         })?;
-        if event::poll(std::time::Duration::from_millis(16))? {
-            if let event::Event::Key(key) = event::read()? {
-                if key.kind == KeyEventKind::Press && key.code == KeyCode::Esc {
-                    break;
-                } else if key.kind == KeyEventKind::Press && key.code == KeyCode::Char('g') {
-                    let resp = app.get_response(&client);
-                    app.set_response(resp)
-                }
+
+        match crossterm::event::read()?.into() {
+            Input {key: Key::Esc, ..} => break,
+            Input {
+                key: Key::Char('g'),
+                ctrl: true,
+                ..
+            } => {
+                let resp = app.get_response(&client);
+                app.set_response(resp)
+            }
+            input => {
+                todo!()
             }
         }
     }
