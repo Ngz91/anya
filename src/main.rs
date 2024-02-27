@@ -1,7 +1,8 @@
 #![allow(dead_code)]
+#![allow(clippy::derivable_impls)]
 
 use crossterm::{
-    event::{self, DisableMouseCapture, EnableMouseCapture, KeyCode, KeyEventKind},
+    event::{DisableMouseCapture, EnableMouseCapture},
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
 use ratatui::prelude::{CrosstermBackend, Terminal};
