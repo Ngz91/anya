@@ -11,6 +11,7 @@ use std::io;
 
 pub mod app;
 pub mod layout;
+pub mod utils;
 
 use crate::layout::MainLayout;
 
@@ -24,6 +25,8 @@ fn main() -> std::io::Result<()> {
 
     let mut app = app::App::default();
     let client = reqwest::Client::new();
+
+    app.activate_deactivate_textarea();
 
     loop {
         terminal.draw(|f| {
@@ -40,8 +43,15 @@ fn main() -> std::io::Result<()> {
             } => {
                 let resp = app.get_response(&client);
                 app.set_response(resp)
+            },
+            Input {
+                key: Key::Char('x'),
+                ctrl: true,
+                ..
+            } => {
+                todo!()
             }
-            input => {
+            _input => {
                 todo!()
             }
         }

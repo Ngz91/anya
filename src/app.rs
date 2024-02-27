@@ -1,26 +1,12 @@
 use ratatui::{
-    style::{Color, Style, Stylize},
-    widgets::{Block, Borders, Padding, Paragraph, Wrap},
+    style::{Stylize},
+    widgets::{Block, Borders},
     Frame,
 };
 use ratatui_textarea::TextArea;
 
 use crate::MainLayout;
-
-fn create_text(text: &str, padding: Vec<u16>) -> Paragraph<'_> {
-    Paragraph::new(text)
-        .block(
-            Block::new()
-                .style(Style::new().bg(Color::Black))
-                .padding(Padding::new(
-                    padding[0], // left
-                    padding[1], // right
-                    padding[2], // top
-                    padding[3], // bottom
-                )),
-        )
-        .wrap(Wrap { trim: true })
-}
+use crate::utils;
 
 pub struct App<'a> {
     request: String,
@@ -70,7 +56,7 @@ impl App<'_> {
 
         if let Some(resp) = &self.response {
             let resp = serde_json::to_string_pretty(resp).unwrap();
-            let r = create_text(&resp, vec![2, 2, 1, 2]);
+            let r = utils::create_text(&resp, vec![2, 2, 1, 2]);
             f.render_widget(r, layout.response_layout[0])
         }
     }
@@ -96,5 +82,14 @@ impl App<'_> {
         if let Ok(resp) = response {
             self.response = Some(resp)
         }
+    }
+
+    pub fn handle_events(&self) {
+        todo!()
+    }
+
+    pub fn activate_deactivate_textarea(&mut self) {
+        utils::activate(&mut self.textarea[0]);
+        utils::inactivate(&mut self.textarea[1]);
     }
 }
