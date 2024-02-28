@@ -68,8 +68,10 @@ impl App<'_> {
         &mut self,
         client: &reqwest::Client,
     ) -> std::result::Result<serde_json::Value, reqwest::Error> {
+        let request_url = &self.textarea[0].lines()[0]; // http://httpbin.org/get for tests
+        let _request_json = &self.textarea[1].lines()[0]; // TODO get json and serialize
         let resp = client
-            .get("https://httpbin.org/get") // TODO: Add here the request url that comes from the request text url (Not yet implemented)
+            .get(request_url)
             .send()
             .await?
             .json::<serde_json::Value>()
