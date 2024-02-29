@@ -8,24 +8,13 @@ use ratatui_textarea::{TextArea, Input};
 use crate::MainLayout;
 use crate::utils;
 
+#[derive(Default)]
 pub struct App<'a> {
     request: String,
     body_json: String,
     response: Option<serde_json::Value>,
     textarea: [TextArea<'a>; 2],
     which: usize,
-}
-
-impl Default for App<'_> {
-    fn default() -> Self {
-        App {
-            request: String::new(),
-            body_json: String::new(),
-            response: None,
-            textarea: [TextArea::default(), TextArea::default()],
-            which: 0
-        }
-    }
 }
 
 impl App<'_> {

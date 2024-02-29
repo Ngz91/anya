@@ -1,5 +1,4 @@
 #![allow(dead_code)]
-#![allow(clippy::derivable_impls)]
 
 use crossterm::{
     event::{DisableMouseCapture, EnableMouseCapture},
