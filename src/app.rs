@@ -58,8 +58,6 @@ impl App<'_> {
         client: &reqwest::Client,
     ) -> std::result::Result<serde_json::Value, reqwest::Error> {
         let request_url = &self.textarea[0].lines()[0]; // http://httpbin.org/get for tests
-        let _request_json = &self.textarea[1].lines().join("");
-        // let _json_value: serde_json::Value = serde_json::from_str(&request_json).unwrap();
 
         let resp = client
             .get(request_url)
@@ -67,6 +65,26 @@ impl App<'_> {
             .await?
             .json::<serde_json::Value>()
             .await?;
+        Ok(resp)
+    }
+
+    #[tokio::main]
+    pub async fn post_request(
+        &mut self,
+        client: &reqwest::Client,
+    ) -> std::result::Result<serde_json::Value, reqwest::Error> {
+        let request_url = &self.textarea[0].lines()[0]; // http://httpbin.org/post for tests
+        let request_json = &self.textarea[1].lines().join("");
+        let json_value: serde_json::Value = serde_json::from_str(request_json).unwrap();
+
+        let resp = client
+            .post(request_url)
+            .json(&json_value)
+            .send()
+            .await?
+            .json::<serde_json::Value>()
+            .await?;
+
         Ok(resp)
     }
 

@@ -36,6 +36,14 @@ fn main() -> std::io::Result<()> {
         match crossterm::event::read()?.into() {
             Input { key: Key::Esc, .. } => break,
             Input {
+                key: Key::Char('x'),
+                ctrl: true,
+                ..
+            } => {
+                app.handle_textarea_events();
+            }
+            // Get method
+            Input {
                 key: Key::Char('g'),
                 ctrl: true,
                 ..
@@ -43,13 +51,15 @@ fn main() -> std::io::Result<()> {
                 let resp = app.get_response(&client);
                 app.set_response(resp)
             }
+            // Post method TODO: Handle errors when json is invalid
             Input {
-                key: Key::Char('x'),
+                key: Key::Char('h'),
                 ctrl: true,
                 ..
             } => {
-                app.handle_textarea_events();
-            }
+                    let resp = app.post_request(&client);
+                    app.set_response(resp);
+                }
             input => {
                 app.handle_inputs(input);
             }
