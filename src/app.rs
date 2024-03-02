@@ -1,12 +1,12 @@
 use ratatui::{
-    style::{Stylize},
+    style::Stylize,
     widgets::{Block, Borders},
     Frame,
 };
-use ratatui_textarea::{TextArea, Input};
+use ratatui_textarea::{Input, TextArea};
 
-use crate::MainLayout;
 use crate::utils;
+use crate::MainLayout;
 
 #[derive(Default)]
 pub struct App<'a> {
@@ -58,7 +58,9 @@ impl App<'_> {
         client: &reqwest::Client,
     ) -> std::result::Result<serde_json::Value, reqwest::Error> {
         let request_url = &self.textarea[0].lines()[0]; // http://httpbin.org/get for tests
-        let _request_json = &self.textarea[1].lines()[0]; // TODO get json and serialize
+        let _request_json = &self.textarea[1].lines().join("");
+        // let _json_value: serde_json::Value = serde_json::from_str(&request_json).unwrap();
+
         let resp = client
             .get(request_url)
             .send()

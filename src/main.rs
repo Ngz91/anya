@@ -34,7 +34,7 @@ fn main() -> std::io::Result<()> {
         })?;
 
         match crossterm::event::read()?.into() {
-            Input {key: Key::Esc, ..} => break,
+            Input { key: Key::Esc, .. } => break,
             Input {
                 key: Key::Char('g'),
                 ctrl: true,
@@ -42,7 +42,7 @@ fn main() -> std::io::Result<()> {
             } => {
                 let resp = app.get_response(&client);
                 app.set_response(resp)
-            },
+            }
             Input {
                 key: Key::Char('x'),
                 ctrl: true,

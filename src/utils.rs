@@ -1,4 +1,7 @@
-use ratatui::{widgets::{Paragraph, Block, Padding, Wrap}, style::{Style, Color, Modifier}};
+use ratatui::{
+    style::{Color, Modifier, Style},
+    widgets::{Block, Padding, Paragraph, Wrap},
+};
 use ratatui_textarea::TextArea;
 
 pub fn create_text(text: &str, padding: Vec<u16>) -> Paragraph<'_> {
