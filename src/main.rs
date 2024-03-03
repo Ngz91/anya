@@ -14,6 +14,8 @@ pub mod utils;
 
 use crate::layout::MainLayout;
 
+use app::App;
+
 fn main() -> std::io::Result<()> {
     let stdout = io::stdout();
     let mut stdout = stdout.lock();
@@ -22,7 +24,7 @@ fn main() -> std::io::Result<()> {
     let backend = CrosstermBackend::new(stdout);
     let mut terminal = Terminal::new(backend)?;
 
-    let mut app = app::App::default();
+    let mut app = App::new();
     let client = reqwest::Client::new();
 
     app.activate_deactivate_textarea();
@@ -48,7 +50,7 @@ fn main() -> std::io::Result<()> {
                 ctrl: true,
                 ..
             } => {
-                let resp = app.get_response(&client);
+                let resp = app.get_request(&client);
                 app.set_response(resp)
             }
             // Post method TODO: Handle errors when json is invalid
@@ -57,9 +59,9 @@ fn main() -> std::io::Result<()> {
                 ctrl: true,
                 ..
             } => {
-                    let resp = app.post_request(&client);
-                    app.set_response(resp);
-                }
+                let resp = app.post_request(&client);
+                app.set_response(resp);
+            }
             input => {
                 app.handle_inputs(input);
             }

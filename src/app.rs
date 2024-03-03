@@ -10,28 +10,30 @@ use crate::MainLayout;
 
 #[derive(Default)]
 pub struct App<'a> {
-    request: String,
-    body_json: String,
     response: Option<serde_json::Value>,
     textarea: [TextArea<'a>; 2],
     which: usize,
 }
 
 impl App<'_> {
+    pub fn new() -> Self {
+        App::default()
+    }
+
     pub fn render_ui(&mut self, f: &mut Frame, layout: &MainLayout) {
         self.textarea[0].set_block(
             Block::default()
                 .borders(Borders::ALL)
                 .title("Request Url")
                 .bold()
-                .blue(),
+                .light_blue(),
         );
         self.textarea[1].set_block(
             Block::default()
-                .borders(Borders::all())
-                .blue()
+                .borders(Borders::ALL)
                 .title("Json")
-                .bold(),
+                .bold()
+                .light_blue(),
         );
 
         f.render_widget(self.textarea[0].widget(), layout.request_layout[0]);
@@ -53,7 +55,7 @@ impl App<'_> {
     }
 
     #[tokio::main]
-    pub async fn get_response(
+    pub async fn get_request(
         &mut self,
         client: &reqwest::Client,
     ) -> std::result::Result<serde_json::Value, reqwest::Error> {
