@@ -9,6 +9,7 @@ use ratatui_textarea::{Input, Key};
 use std::io;
 
 pub mod app;
+pub mod errors;
 pub mod layout;
 pub mod utils;
 
@@ -53,7 +54,6 @@ fn main() -> std::io::Result<()> {
                 let resp = app.get_request(&client);
                 app.set_response(resp)
             }
-            // Post method TODO: Handle errors when json is invalid
             Input {
                 key: Key::Char('h'),
                 ctrl: true,

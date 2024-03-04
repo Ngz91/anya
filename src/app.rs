@@ -5,6 +5,7 @@ use ratatui::{
 };
 use ratatui_textarea::{Input, TextArea};
 
+use crate::errors;
 use crate::utils;
 use crate::MainLayout;
 
@@ -58,7 +59,7 @@ impl App<'_> {
     pub async fn get_request(
         &mut self,
         client: &reqwest::Client,
-    ) -> std::result::Result<serde_json::Value, reqwest::Error> {
+    ) -> std::result::Result<serde_json::Value, errors::CustomError> {
         let request_url = &self.textarea[0].lines()[0]; // http://httpbin.org/get for tests
 
         let resp = client
@@ -74,10 +75,15 @@ impl App<'_> {
     pub async fn post_request(
         &mut self,
         client: &reqwest::Client,
-    ) -> std::result::Result<serde_json::Value, reqwest::Error> {
+    ) -> std::result::Result<serde_json::Value, errors::CustomError> {
         let request_url = &self.textarea[0].lines()[0]; // http://httpbin.org/post for tests
         let request_json = &self.textarea[1].lines().join("");
-        let json_value: serde_json::Value = serde_json::from_str(request_json).unwrap();
+        let json_value: serde_json::Value = match serde_json::from_str(request_json) {
+            Ok(value) => value,
+            Err(err) => {
+                return Err(errors::handle_serde_json_error(err));
+            }
+        };
 
         let resp = client
             .post(request_url)
@@ -92,11 +98,14 @@ impl App<'_> {
 
     pub fn set_response(
         &mut self,
-        response: std::result::Result<serde_json::Value, reqwest::Error>,
+        response: std::result::Result<serde_json::Value, errors::CustomError>,
     ) {
-        if let Ok(resp) = response {
-            self.response = Some(resp)
-        }
+        self.response = match response {
+            Ok(resp) => Some(resp),
+            Err(err) => Some(serde_json::json!({
+                "error": err.to_string()
+            })),
+        };
     }
 
     pub fn handle_textarea_events(&mut self) {
