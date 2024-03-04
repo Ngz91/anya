@@ -60,7 +60,7 @@ impl App<'_> {
         &mut self,
         client: &reqwest::Client,
     ) -> std::result::Result<serde_json::Value, errors::CustomError> {
-        let request_url = &self.textarea[0].lines()[0]; // http://httpbin.org/get for tests
+        let request_url = &self.textarea[0].lines()[0];
 
         let resp = client
             .get(request_url)
@@ -76,7 +76,7 @@ impl App<'_> {
         &mut self,
         client: &reqwest::Client,
     ) -> std::result::Result<serde_json::Value, errors::CustomError> {
-        let request_url = &self.textarea[0].lines()[0]; // http://httpbin.org/post for tests
+        let request_url = &self.textarea[0].lines()[0];
         let request_json = &self.textarea[1].lines().join("");
         let json_value: serde_json::Value = match serde_json::from_str(request_json) {
             Ok(value) => value,
