@@ -1,6 +1,9 @@
-# Anya
+<div align="center">
+    <h1>🍱 Anya 🍱</h1>
+    <h3> Terminal based http client application </h3>
+</div>
 
-Anya is a lightweight TUI HTTP client application. Test GET and POST methods with or without a JSON body.
+Anya is a lightweight TUI HTTP client application. Test GET and POST methods with or without a JSON body on your terminal.
 
 # Installation
 
