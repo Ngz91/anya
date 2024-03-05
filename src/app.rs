@@ -56,53 +56,29 @@ impl App<'_> {
     }
 
     #[tokio::main]
-    pub async fn get_request(
+    pub async fn request(
         &mut self,
         client: &reqwest::Client,
+        method: reqwest::Method,
     ) -> std::result::Result<serde_json::Value, errors::CustomError> {
         let request_url = &self.textarea[0].lines()[0];
 
         let has_json = !self.textarea[1].lines()[0].is_empty();
-        let mut request_builder = client.get(request_url);
 
-        if has_json {
-            let request_json = &self.textarea[1].lines().join("");
-            let json_value: serde_json::Value = match serde_json::from_str(request_json) {
-                Ok(value) => value,
-                Err(err) => {
-                    return Err(errors::handle_serde_json_error(err));
-                }
-            };
-            request_builder = request_builder.json(&json_value);
-        }
+        let mut request_builder = client.request(method, request_url);
 
-        let resp = request_builder
-            .send()
-            .await?
-            .json::<serde_json::Value>()
-            .await?;
-        Ok(resp)
-    }
-
-    #[tokio::main]
-    pub async fn post_request(
-        &mut self,
-        client: &reqwest::Client,
-    ) -> std::result::Result<serde_json::Value, errors::CustomError> {
-        let request_url = &self.textarea[0].lines()[0];
-
-        let has_json = !self.textarea[1].lines()[0].is_empty();
-        let mut request_builder = client.post(request_url);
-
-        if has_json {
-            let request_json = &self.textarea[1].lines().join("");
-            let json_value: serde_json::Value = match serde_json::from_str(request_json) {
-                Ok(value) => value,
-                Err(err) => {
-                    return Err(errors::handle_serde_json_error(err));
-                }
-            };
-            request_builder = request_builder.json(&json_value);
+        match has_json {
+            true => {
+                let request_json = &self.textarea[1].lines().join("");
+                let json_value: serde_json::Value = match serde_json::from_str(request_json) {
+                    Ok(value) => value,
+                    Err(err) => {
+                        return Err(errors::handle_serde_json_error(err));
+                    }
+                };
+                request_builder = request_builder.json(&json_value);
+            }
+            false => {} // Do nothing, no JSON
         }
 
         let resp = request_builder

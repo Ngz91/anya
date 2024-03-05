@@ -51,7 +51,8 @@ fn main() -> std::io::Result<()> {
                 ctrl: true,
                 ..
             } => {
-                let resp = app.get_request(&client);
+                // let resp = app.get_request(&client);
+                let resp = app.request(&client, reqwest::Method::GET);
                 app.set_response(resp)
             }
             // POST method
@@ -60,7 +61,8 @@ fn main() -> std::io::Result<()> {
                 ctrl: true,
                 ..
             } => {
-                let resp = app.post_request(&client);
+                // let resp = app.post_request(&client);
+                let resp = app.request(&client, reqwest::Method::POST);
                 app.set_response(resp)
             }
             input => {
