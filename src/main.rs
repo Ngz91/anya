@@ -43,9 +43,9 @@ fn main() -> std::io::Result<()> {
                 ctrl: true,
                 ..
             } => {
-                app.handle_textarea_events();
+                app.change_textarea();
             }
-            // Get method
+            // GET method
             Input {
                 key: Key::Char('g'),
                 ctrl: true,
@@ -54,13 +54,14 @@ fn main() -> std::io::Result<()> {
                 let resp = app.get_request(&client);
                 app.set_response(resp)
             }
+            // POST method
             Input {
                 key: Key::Char('h'),
                 ctrl: true,
                 ..
             } => {
                 let resp = app.post_request(&client);
-                app.set_response(resp);
+                app.set_response(resp)
             }
             input => {
                 app.handle_inputs(input);

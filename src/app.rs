@@ -42,7 +42,7 @@ impl App<'_> {
         f.render_widget(
             Block::default()
                 .borders(Borders::all())
-                .green()
+                .light_green()
                 .title("Response")
                 .bold(),
             layout.response_layout[0],
@@ -62,8 +62,21 @@ impl App<'_> {
     ) -> std::result::Result<serde_json::Value, errors::CustomError> {
         let request_url = &self.textarea[0].lines()[0];
 
-        let resp = client
-            .get(request_url)
+        let has_json = !self.textarea[1].lines()[0].is_empty();
+        let mut request_builder = client.get(request_url);
+
+        if has_json {
+            let request_json = &self.textarea[1].lines().join("");
+            let json_value: serde_json::Value = match serde_json::from_str(request_json) {
+                Ok(value) => value,
+                Err(err) => {
+                    return Err(errors::handle_serde_json_error(err));
+                }
+            };
+            request_builder = request_builder.json(&json_value);
+        }
+
+        let resp = request_builder
             .send()
             .await?
             .json::<serde_json::Value>()
@@ -77,17 +90,22 @@ impl App<'_> {
         client: &reqwest::Client,
     ) -> std::result::Result<serde_json::Value, errors::CustomError> {
         let request_url = &self.textarea[0].lines()[0];
-        let request_json = &self.textarea[1].lines().join("");
-        let json_value: serde_json::Value = match serde_json::from_str(request_json) {
-            Ok(value) => value,
-            Err(err) => {
-                return Err(errors::handle_serde_json_error(err));
-            }
-        };
 
-        let resp = client
-            .post(request_url)
-            .json(&json_value)
+        let has_json = !self.textarea[1].lines()[0].is_empty();
+        let mut request_builder = client.post(request_url);
+
+        if has_json {
+            let request_json = &self.textarea[1].lines().join("");
+            let json_value: serde_json::Value = match serde_json::from_str(request_json) {
+                Ok(value) => value,
+                Err(err) => {
+                    return Err(errors::handle_serde_json_error(err));
+                }
+            };
+            request_builder = request_builder.json(&json_value);
+        }
+
+        let resp = request_builder
             .send()
             .await?
             .json::<serde_json::Value>()
@@ -108,7 +126,7 @@ impl App<'_> {
         };
     }
 
-    pub fn handle_textarea_events(&mut self) {
+    pub fn change_textarea(&mut self) {
         utils::inactivate(&mut self.textarea[self.which]);
         self.which = (self.which + 1) % 2;
         utils::activate(&mut self.textarea[self.which])
