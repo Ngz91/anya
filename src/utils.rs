@@ -1,21 +1,17 @@
 use ratatui::{
-    style::{Color, Modifier, Style},
+    style::{Modifier, Style},
     widgets::{Block, Padding, Paragraph, Wrap},
 };
 use ratatui_textarea::TextArea;
 
 pub fn create_text(text: &str, padding: Vec<u16>) -> Paragraph<'_> {
     Paragraph::new(text)
-        .block(
-            Block::new()
-                .style(Style::new().bg(Color::Black))
-                .padding(Padding::new(
-                    padding[0], // left
-                    padding[1], // right
-                    padding[2], // top
-                    padding[3], // bottom
-                )),
-        )
+        .block(Block::new().style(Style::new()).padding(Padding::new(
+            padding[0], // left
+            padding[1], // right
+            padding[2], // top
+            padding[3], // bottom
+        )))
         .wrap(Wrap { trim: true })
 }
 
