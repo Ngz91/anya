@@ -20,7 +20,7 @@ impl MainLayout {
         let request_layout = Layout::default()
             .direction(Direction::Vertical)
             .horizontal_margin(1)
-            .constraints([Constraint::Percentage(5), Constraint::Percentage(95)])
+            .constraints([Constraint::Percentage(7), Constraint::Percentage(93)])
             .split(main_layout[0]);
         let response_layout = Layout::default()
             .direction(Direction::Vertical)
