@@ -36,17 +36,15 @@ impl App<'_> {
                 .bold()
                 .light_blue(),
         );
+        let response_block = Block::default()
+            .borders(Borders::ALL)
+            .title("Response")
+            .bold()
+            .light_green();
 
         f.render_widget(self.textarea[0].widget(), layout.request_layout[0]);
         f.render_widget(self.textarea[1].widget(), layout.request_layout[1]);
-        f.render_widget(
-            Block::default()
-                .borders(Borders::all())
-                .light_green()
-                .title("Response")
-                .bold(),
-            layout.response_layout[0],
-        );
+        f.render_widget(response_block, layout.response_layout[0]);
 
         if let Some(resp) = &self.response {
             let resp = serde_json::to_string_pretty(resp).unwrap();
@@ -97,7 +95,7 @@ impl App<'_> {
         self.response = match response {
             Ok(resp) => Some(resp),
             Err(err) => Some(serde_json::json!({
-                "error": err.to_string()
+                "Request error": err.to_string()
             })),
         };
     }
