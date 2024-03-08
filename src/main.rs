@@ -20,6 +20,7 @@ fn main() -> std::io::Result<()> {
     let mut stdout = stdout.lock();
     enable_raw_mode()?;
     crossterm::execute!(stdout, EnterAlternateScreen, EnableMouseCapture)?;
+
     let backend = CrosstermBackend::new(stdout);
     let mut terminal = Terminal::new(backend)?;
 
@@ -35,7 +36,12 @@ fn main() -> std::io::Result<()> {
         })?;
 
         match crossterm::event::read()?.into() {
-            Input { key: Key::Esc, .. } => break,
+            Input { key: Key::Esc, .. }
+            | Input {
+                key: Key::Char('q'),
+                ctrl: true,
+                ..
+            } => break,
             Input {
                 key: Key::Char('x'),
                 ctrl: true,
