@@ -3,12 +3,12 @@
     <h3> Terminal based HTTP client application </h3>
 </div>
 
-Anya is a lightweight TUI HTTP client application written in Rust. Test GET and POST methods with or without a JSON body from your terminal.
+Anya is a lightweight TUI HTTP client application. Test GET and POST methods with or without a JSON body from your terminal.
 
 # Installation
 
-- Install Rust if it's not already installed in your system
-- Clone the repository
+- Install Rust if it's not already installed in your system. (https://www.rust-lang.org/tools/install)
+- Clone the repository.
 - Run `cargo build`
 
 # Usage
