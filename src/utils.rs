@@ -15,7 +15,7 @@ pub fn create_text(text: &str, padding: Vec<u16>) -> Paragraph<'_> {
         .wrap(Wrap { trim: true })
 }
 
-pub fn inactivate(textarea: &mut TextArea<'_>) {
+pub fn deactivate(textarea: &mut TextArea<'_>) {
     textarea.set_cursor_line_style(Style::default());
     textarea.set_cursor_style(Style::default());
 }

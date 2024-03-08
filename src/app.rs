@@ -101,7 +101,7 @@ impl App<'_> {
     }
 
     pub fn change_textarea(&mut self) {
-        utils::inactivate(&mut self.textarea[self.which]);
+        utils::deactivate(&mut self.textarea[self.which]);
         self.which = (self.which + 1) % 2;
         utils::activate(&mut self.textarea[self.which])
     }
@@ -112,6 +112,6 @@ impl App<'_> {
 
     pub fn activate_deactivate_textarea(&mut self) {
         utils::activate(&mut self.textarea[0]);
-        utils::inactivate(&mut self.textarea[1]);
+        utils::deactivate(&mut self.textarea[1]);
     }
 }
