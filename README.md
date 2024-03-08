@@ -13,7 +13,7 @@ Anya is a lightweight TUI HTTP client application. Test GET and POST methods wit
 
 # Usage
 
-Use the folowing keymaps to make a request to the endpoint of choice.
+Use the following keymaps to make a request to the endpoint of choice.
 
 <b>Note:</b> Since the project is in it's early stages only GET and POST methods are supported.
 
@@ -22,4 +22,4 @@ Use the folowing keymaps to make a request to the endpoint of choice.
 | Ctrl + x | Change between layouts
 | Ctrl + g | GET request
 | Ctrl + h | POST request
-| Esc | Exit
+| Esc or Ctrl + q | Exit
