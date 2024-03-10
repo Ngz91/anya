@@ -7,7 +7,7 @@ Anya is a lightweight TUI HTTP client application. Test GET and POST methods wit
 
 # Installation
 
-- Install Rust if it's not already installed in your system. (https://www.rust-lang.org/tools/install)
+- [Install](https://www.rust-lang.org/tools/install) Rust if it's not already installed in your system.
 - Clone the repository.
 - Run `cargo build`
 
