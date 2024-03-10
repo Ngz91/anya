@@ -1,6 +1,6 @@
 [package]
 name = "anya"
-version = "0.1.101"
+version = "0.1.102"
 authors = ["Nevio Gomez <neviogomez91@gmail.com>"]
 description = """
   anya is a lightweight TUI HTTP client application to test
