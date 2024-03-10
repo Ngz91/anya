@@ -12,7 +12,6 @@ repository = "https://github.com/Ngz91/anya"
 keywords = ["tui", "http-client"]
 categories = ["command-line-utilities", "http-client"]
 license = "MIT"
-license-file = "LICENSE"
 autotest = false
 edition = "2021"
 rust-version = "1.76.0"
