@@ -1,7 +1,22 @@
 [package]
 name = "anya"
-version = "0.1.0"
+version = "0.1"
+authors = ["Nevio Gomez <neviogomez91@gmail.com>"]
+description = """
+  anya is a lightweight TUI HTTP client application to test
+  GET and POST endpoints with or without a JSON body.
+"""
+documentation = "https://github.com/Ngz91/anya"
+homepage = "https://github.com/Ngz91/anya"
+repository = "https://github.com/Ngz91/anya"
+keywords = ["tui", "http-client"]
+categories = ["command-line-utilities", "http-client"]
+license = "MIT"
+license-file = "LICENSE"
+autotest = false
 edition = "2021"
+rust-version = 1.76
+readme = "README.md"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
