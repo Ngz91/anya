@@ -1,6 +1,6 @@
 [package]
 name = "anya"
-version = "0.1"
+version = "0.1.0"
 authors = ["Nevio Gomez <neviogomez91@gmail.com>"]
 description = """
   anya is a lightweight TUI HTTP client application to test
@@ -15,7 +15,7 @@ license = "MIT"
 license-file = "LICENSE"
 autotest = false
 edition = "2021"
-rust-version = 1.76
+rust-version = "1.76.0"
 readme = "README.md"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
