@@ -3,8 +3,8 @@ use crossterm::{
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
 use ratatui::prelude::{CrosstermBackend, Terminal};
-use ratatui_textarea::{Input, Key};
 use std::io;
+use tui_textarea::{Input, Key};
 
 pub mod app;
 pub mod errors;

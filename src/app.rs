@@ -3,7 +3,7 @@ use ratatui::{
     widgets::{Block, Borders},
     Frame,
 };
-use ratatui_textarea::{Input, TextArea};
+use tui_textarea::{Input, TextArea};
 
 use crate::errors;
 use crate::utils;

@@ -2,7 +2,7 @@ use ratatui::{
     style::{Modifier, Style},
     widgets::{Block, Padding, Paragraph, Wrap},
 };
-use ratatui_textarea::TextArea;
+use tui_textarea::TextArea;
 
 pub fn create_text(text: &str, padding: Vec<u16>) -> Paragraph<'_> {
     Paragraph::new(text)
