@@ -9,7 +9,8 @@ Anya is a lightweight TUI HTTP client application. Test GET and POST methods wit
 
 - [Install](https://www.rust-lang.org/tools/install) Rust if it's not already installed in your system.
 - Clone the repository.
-- Run `cargo build`
+- Run `cargo build --release`
+- The created binary should be located at `./target/release/anya.*` in the cloned repository folder.
 
 # Usage
 
