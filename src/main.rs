@@ -4,7 +4,6 @@ use crossterm::{
 };
 use ratatui::prelude::{CrosstermBackend, Terminal};
 use std::io;
-use tui_textarea::{Input, Key};
 
 pub mod app;
 pub mod errors;
@@ -15,7 +14,7 @@ use crate::layout::MainLayout;
 
 use app::App;
 
-fn main() -> std::io::Result<()> {
+fn main() -> io::Result<()> {
     let stdout = io::stdout();
     let mut stdout = stdout.lock();
     enable_raw_mode()?;
@@ -29,49 +28,7 @@ fn main() -> std::io::Result<()> {
 
     app.activate_deactivate_textarea();
 
-    loop {
-        terminal.draw(|f| {
-            let layout = MainLayout::new(f);
-            app.render_ui(f, &layout);
-        })?;
-
-        match crossterm::event::read()?.into() {
-            Input { key: Key::Esc, .. }
-            | Input {
-                key: Key::Char('q'),
-                ctrl: true,
-                ..
-            } => break,
-            Input {
-                key: Key::Char('x'),
-                ctrl: true,
-                ..
-            } => {
-                app.change_textarea();
-            }
-            // GET method
-            Input {
-                key: Key::Char('g'),
-                ctrl: true,
-                ..
-            } => {
-                let resp = app.request(&client, reqwest::Method::GET);
-                app.set_response(resp)
-            }
-            // POST method
-            Input {
-                key: Key::Char('h'),
-                ctrl: true,
-                ..
-            } => {
-                let resp = app.request(&client, reqwest::Method::POST);
-                app.set_response(resp)
-            }
-            input => {
-                app.handle_inputs(input);
-            }
-        }
-    }
+    let res = app::App::run_app(&mut terminal, &mut app, &client);
 
     disable_raw_mode()?;
     crossterm::execute!(
@@ -80,5 +37,10 @@ fn main() -> std::io::Result<()> {
         DisableMouseCapture,
     )?;
     terminal.show_cursor()?;
+
+    if let Err(err) = res {
+        println!("Error encountered: {err:?}")
+    }
+
     Ok(())
 }

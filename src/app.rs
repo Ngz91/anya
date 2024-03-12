@@ -1,11 +1,12 @@
-use std::time::Duration;
+use std::{io, time::Duration};
 
 use ratatui::{
+    backend::Backend,
     style::Stylize,
     widgets::{Block, Borders},
-    Frame,
+    Frame, Terminal,
 };
-use tui_textarea::{Input, TextArea};
+use tui_textarea::{Input, Key, TextArea};
 
 use crate::errors;
 use crate::utils;
@@ -52,6 +53,56 @@ impl App<'_> {
             let resp = serde_json::to_string_pretty(resp).unwrap();
             let response_paragraph = utils::create_text(&resp, vec![2, 2, 1, 2]);
             f.render_widget(response_paragraph, layout.response_layout[0])
+        }
+    }
+
+    pub fn run_app<B: Backend>(
+        terminal: &mut Terminal<B>,
+        app: &mut App,
+        client: &reqwest::Client,
+    ) -> io::Result<()> {
+        loop {
+            terminal.draw(|f| {
+                let layout = MainLayout::new(f);
+                app.render_ui(f, &layout);
+            })?;
+
+            match crossterm::event::read()?.into() {
+                Input { key: Key::Esc, .. }
+                | Input {
+                    key: Key::Char('q'),
+                    ctrl: true,
+                    ..
+                } => return Ok(()),
+                Input {
+                    key: Key::Char('x'),
+                    ctrl: true,
+                    ..
+                } => {
+                    app.change_textarea();
+                }
+                // GET method
+                Input {
+                    key: Key::Char('g'),
+                    ctrl: true,
+                    ..
+                } => {
+                    let resp = app.request(client, reqwest::Method::GET);
+                    app.set_response(resp)
+                }
+                // POST method
+                Input {
+                    key: Key::Char('h'),
+                    ctrl: true,
+                    ..
+                } => {
+                    let resp = app.request(client, reqwest::Method::POST);
+                    app.set_response(resp)
+                }
+                input => {
+                    app.handle_inputs(input);
+                }
+            }
         }
     }
 
