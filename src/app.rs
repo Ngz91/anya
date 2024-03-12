@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use ratatui::{
     style::Stylize,
     widgets::{Block, Borders},
@@ -63,7 +65,9 @@ impl App<'_> {
 
         let has_json = !self.textarea[1].lines()[0].is_empty();
 
-        let mut request_builder = client.request(method, request_url);
+        let mut request_builder = client
+            .request(method, request_url)
+            .timeout(Duration::from_secs(5));
 
         match has_json {
             true => {
