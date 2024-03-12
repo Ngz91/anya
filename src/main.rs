@@ -28,7 +28,7 @@ fn main() -> io::Result<()> {
 
     app.activate_deactivate_textarea();
 
-    let res = app::App::run_app(&mut terminal, &mut app, &client);
+    let res = app.run_app(&mut terminal, &client);
 
     disable_raw_mode()?;
     crossterm::execute!(

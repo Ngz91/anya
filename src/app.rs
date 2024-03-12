@@ -57,14 +57,14 @@ impl App<'_> {
     }
 
     pub fn run_app<B: Backend>(
+        &mut self,
         terminal: &mut Terminal<B>,
-        app: &mut App,
         client: &reqwest::Client,
     ) -> io::Result<()> {
         loop {
             terminal.draw(|f| {
                 let layout = MainLayout::new(f);
-                app.render_ui(f, &layout);
+                self.render_ui(f, &layout);
             })?;
 
             match crossterm::event::read()?.into() {
@@ -79,7 +79,7 @@ impl App<'_> {
                     ctrl: true,
                     ..
                 } => {
-                    app.change_textarea();
+                    self.change_textarea();
                 }
                 // GET method
                 Input {
@@ -87,8 +87,8 @@ impl App<'_> {
                     ctrl: true,
                     ..
                 } => {
-                    let resp = app.request(client, reqwest::Method::GET);
-                    app.set_response(resp)
+                    let resp = self.request(client, reqwest::Method::GET);
+                    self.set_response(resp)
                 }
                 // POST method
                 Input {
@@ -96,11 +96,11 @@ impl App<'_> {
                     ctrl: true,
                     ..
                 } => {
-                    let resp = app.request(client, reqwest::Method::POST);
-                    app.set_response(resp)
+                    let resp = self.request(client, reqwest::Method::POST);
+                    self.set_response(resp)
                 }
                 input => {
-                    app.handle_inputs(input);
+                    self.handle_inputs(input);
                 }
             }
         }
