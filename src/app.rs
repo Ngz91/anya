@@ -24,38 +24,6 @@ impl App<'_> {
         App::default()
     }
 
-    pub fn render_ui(&mut self, f: &mut Frame, layout: &MainLayout) {
-        self.textarea[0].set_block(
-            Block::default()
-                .borders(Borders::ALL)
-                .title("Request Url")
-                .bold()
-                .light_blue(),
-        );
-        self.textarea[1].set_block(
-            Block::default()
-                .borders(Borders::ALL)
-                .title("Json")
-                .bold()
-                .light_blue(),
-        );
-        let response_block = Block::default()
-            .borders(Borders::ALL)
-            .title("Response")
-            .bold()
-            .light_green();
-
-        f.render_widget(self.textarea[0].widget(), layout.request_layout[0]);
-        f.render_widget(self.textarea[1].widget(), layout.request_layout[1]);
-        f.render_widget(response_block, layout.response_layout[0]);
-
-        if let Some(resp) = &self.response {
-            let resp = serde_json::to_string_pretty(resp).unwrap();
-            let response_paragraph = utils::create_text(&resp, vec![2, 2, 1, 2]);
-            f.render_widget(response_paragraph, layout.response_layout[0])
-        }
-    }
-
     pub fn run_app<B: Backend>(
         &mut self,
         terminal: &mut Terminal<B>,
@@ -106,8 +74,45 @@ impl App<'_> {
         }
     }
 
+    fn render_ui(&mut self, f: &mut Frame, layout: &MainLayout) {
+        self.textarea[0].set_block(
+            Block::default()
+                .borders(Borders::ALL)
+                .title("Request Url")
+                .bold()
+                .light_blue(),
+        );
+        self.textarea[1].set_block(
+            Block::default()
+                .borders(Borders::ALL)
+                .title("Json")
+                .bold()
+                .light_blue(),
+        );
+        let response_block = Block::default()
+            .borders(Borders::ALL)
+            .title("Response")
+            .bold()
+            .light_green();
+
+        f.render_widget(self.textarea[0].widget(), layout.request_layout[0]);
+        f.render_widget(self.textarea[1].widget(), layout.request_layout[1]);
+        f.render_widget(response_block, layout.response_layout[0]);
+
+        if let Some(resp) = &self.response {
+            let resp = serde_json::to_string_pretty(resp).unwrap();
+            let response_paragraph = utils::create_text(&resp, vec![2, 2, 1, 2]);
+            f.render_widget(response_paragraph, layout.response_layout[0])
+        }
+    }
+
+    pub fn activate_deactivate_textarea(&mut self) {
+        utils::activate(&mut self.textarea[0]);
+        utils::deactivate(&mut self.textarea[1]);
+    }
+
     #[tokio::main]
-    pub async fn request(
+    async fn request(
         &mut self,
         client: &reqwest::Client,
         method: reqwest::Method,
@@ -143,7 +148,7 @@ impl App<'_> {
         Ok(resp)
     }
 
-    pub fn set_response(
+    fn set_response(
         &mut self,
         response: std::result::Result<serde_json::Value, errors::CustomError>,
     ) {
@@ -155,18 +160,13 @@ impl App<'_> {
         };
     }
 
-    pub fn change_textarea(&mut self) {
+    fn change_textarea(&mut self) {
         utils::deactivate(&mut self.textarea[self.which]);
         self.which = (self.which + 1) % 2;
         utils::activate(&mut self.textarea[self.which])
     }
 
-    pub fn handle_inputs(&mut self, input: Input) {
+    fn handle_inputs(&mut self, input: Input) {
         self.textarea[self.which].input(input);
-    }
-
-    pub fn activate_deactivate_textarea(&mut self) {
-        utils::activate(&mut self.textarea[0]);
-        utils::deactivate(&mut self.textarea[1]);
     }
 }
