@@ -1,3 +1,4 @@
+use arboard::Clipboard;
 use crossterm::{
     event::{DisableMouseCapture, EnableMouseCapture},
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
@@ -15,6 +16,7 @@ use crate::layout::MainLayout;
 use app::App;
 
 fn main() -> io::Result<()> {
+    let mut clipboard = Clipboard::new().unwrap();
     let stdout = io::stdout();
     let mut stdout = stdout.lock();
     enable_raw_mode()?;
@@ -28,7 +30,7 @@ fn main() -> io::Result<()> {
 
     app.activate_deactivate_textarea();
 
-    let res = app.run_app(&mut terminal, &client);
+    let res = app.run_app(&mut terminal, &client, &mut clipboard);
 
     disable_raw_mode()?;
     crossterm::execute!(

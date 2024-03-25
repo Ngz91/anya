@@ -1,5 +1,6 @@
 use std::{io, time::Duration};
 
+use arboard::Clipboard;
 use ratatui::{
     backend::Backend,
     style::Stylize,
@@ -28,6 +29,7 @@ impl App<'_> {
         &mut self,
         terminal: &mut Terminal<B>,
         client: &reqwest::Client,
+        clipboard: &mut Clipboard,
     ) -> io::Result<()> {
         loop {
             terminal.draw(|f| {
@@ -66,6 +68,23 @@ impl App<'_> {
                 } => {
                     let resp = self.request(client, reqwest::Method::POST);
                     self.set_response(resp)
+                }
+                // Paste clipboard contents into the active textarea
+                Input {
+                    key: Key::Char('l'),
+                    ctrl: true,
+                    ..
+                } => {
+                    let clip_text = clipboard.get_text().unwrap();
+                    self.textarea[self.which].insert_str(clip_text);
+                }
+                // Select textarea contents
+                Input {
+                    key: Key::Char('k'),
+                    ctrl: true,
+                    ..
+                } => {
+                    self.textarea[self.which].select_all();
                 }
                 input => {
                     self.handle_inputs(input);
