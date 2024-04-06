@@ -25,4 +25,6 @@ Use the following keymaps to make a request to the endpoint of choice.
 | Ctrl + x | Change between layouts
 | Ctrl + g | GET request
 | Ctrl + h | POST request
+| Ctrl + l | Paste from clipboard
+| Ctrl + k | Select all text
 | Esc or Ctrl + q | Exit
