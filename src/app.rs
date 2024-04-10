@@ -31,6 +31,8 @@ impl App<'_> {
         client: &reqwest::Client,
         clipboard: &mut Clipboard,
     ) -> io::Result<()> {
+        self.textarea[0].insert_str("https://");
+
         loop {
             terminal.draw(|f| {
                 let layout = MainLayout::new(f);
