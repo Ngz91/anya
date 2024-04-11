@@ -15,7 +15,8 @@ use crate::layout::MainLayout;
 
 use app::App;
 
-fn main() -> io::Result<()> {
+#[tokio::main]
+async fn main() -> io::Result<()> {
     let mut clipboard = Clipboard::new().unwrap();
     let stdout = io::stdout();
     let mut stdout = stdout.lock();
@@ -30,7 +31,7 @@ fn main() -> io::Result<()> {
 
     app.activate_deactivate_textarea();
 
-    let res = app.run_app(&mut terminal, &client, &mut clipboard);
+    let res = app.run_app(&mut terminal, &client, &mut clipboard).await;
 
     disable_raw_mode()?;
     crossterm::execute!(

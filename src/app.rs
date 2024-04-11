@@ -25,7 +25,7 @@ impl App<'_> {
         App::default()
     }
 
-    pub fn run_app<B: Backend>(
+    pub async fn run_app<B: Backend>(
         &mut self,
         terminal: &mut Terminal<B>,
         client: &reqwest::Client,
@@ -59,7 +59,7 @@ impl App<'_> {
                     ctrl: true,
                     ..
                 } => {
-                    let resp = self.request(client, reqwest::Method::GET);
+                    let resp = self.request(client, reqwest::Method::GET).await;
                     self.set_response(resp)
                 }
                 // POST method
@@ -68,7 +68,7 @@ impl App<'_> {
                     ctrl: true,
                     ..
                 } => {
-                    let resp = self.request(client, reqwest::Method::POST);
+                    let resp = self.request(client, reqwest::Method::POST).await;
                     self.set_response(resp)
                 }
                 // Paste clipboard contents into the active textarea
@@ -132,7 +132,6 @@ impl App<'_> {
         utils::deactivate(&mut self.textarea[1]);
     }
 
-    #[tokio::main]
     async fn request(
         &mut self,
         client: &reqwest::Client,
