@@ -33,6 +33,7 @@ impl App<'_> {
         state_tx: mpsc::Sender<State>,
     ) -> io::Result<()> {
         self.textarea[0].insert_str("https://");
+        state_tx.send(self.state.clone()).await.unwrap();
 
         loop {
             terminal.draw(|f| {
@@ -47,6 +48,7 @@ impl App<'_> {
                     ctrl: true,
                     ..
                 } => {
+                    self.state = State::Exit;
                     state_tx.send(self.state.clone()).await.unwrap();
                     return Ok(());
                 }

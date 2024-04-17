@@ -49,16 +49,15 @@ async fn main() -> io::Result<()> {
 
     app.activate_deactivate_textarea();
 
-    let res = app
-        .run_app(&mut terminal, &client, &mut clipboard, state_tx.clone())
-        .await;
+    // tokio::spawn(async move { requester.start_requester().await });
+    // let res = app
+    //     .run_app(&mut terminal, &client, &mut clipboard, state_tx.clone())
+    //     .await;
 
-    tokio::spawn(async move { requester.start_requester().await });
-
-    // let _ = tokio::join!(
-    //     requester.start_requester(),
-    //     app.run_app(&mut terminal, &client, &mut clipboard, state_tx.clone()),
-    // );
+    let _ = tokio::join!(
+        requester.start_requester(),
+        app.run_app(&mut terminal, &client, &mut clipboard, state_tx.clone()),
+    );
 
     disable_raw_mode()?;
     crossterm::execute!(
@@ -68,9 +67,9 @@ async fn main() -> io::Result<()> {
     )?;
     terminal.show_cursor()?;
 
-    if let Err(err) = res {
-        println!("Error encountered: {err:?}")
-    }
+    // if let Err(err) = res {
+    //     println!("Error encountered: {err:?}")
+    // }
 
     Ok(())
 }

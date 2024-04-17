@@ -28,9 +28,9 @@ impl Requester {
 
     pub async fn start_requester(&mut self) {
         println!("Requester initialized");
-        while self.state_rx.recv().await.unwrap() != State::Exit {
+        if self.state_rx.recv().await.unwrap() != State::Exit {
             println!("Requester ready");
-            tokio::time::sleep(Duration::from_secs(5)).await;
         }
+        println!("Requester Shutdown");
     }
 }
