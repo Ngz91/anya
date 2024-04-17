@@ -3,21 +3,38 @@ use crossterm::{
     event::{DisableMouseCapture, EnableMouseCapture},
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
+use errors::CustomError;
 use ratatui::prelude::{CrosstermBackend, Terminal};
 use std::io;
+use tokio::sync::mpsc;
 
 pub mod app;
 pub mod errors;
 pub mod layout;
+pub mod requester;
 pub mod utils;
 
 use crate::layout::MainLayout;
 
 use app::App;
+use requester::Requester;
+
+#[derive(Default, Clone, Debug, PartialEq, Eq)]
+pub enum State {
+    #[default]
+    Idle,
+    Running,
+    Exit,
+}
 
 #[tokio::main]
 async fn main() -> io::Result<()> {
+    let (state_tx, state_rx) = mpsc::channel::<State>(1);
+    let (request_tx, request_rx) = mpsc::channel::<reqwest::RequestBuilder>(2);
+    let (response_tx, response_rx) = mpsc::channel::<Result<serde_json::Value, CustomError>>(3);
+
     let mut clipboard = Clipboard::new().unwrap();
+
     let stdout = io::stdout();
     let mut stdout = stdout.lock();
     enable_raw_mode()?;
@@ -27,11 +44,21 @@ async fn main() -> io::Result<()> {
     let mut terminal = Terminal::new(backend)?;
 
     let mut app = App::new();
+    let mut requester = Requester::new(state_rx, request_rx, response_tx);
     let client = reqwest::Client::new();
 
     app.activate_deactivate_textarea();
 
-    let res = app.run_app(&mut terminal, &client, &mut clipboard).await;
+    let res = app
+        .run_app(&mut terminal, &client, &mut clipboard, state_tx.clone())
+        .await;
+
+    tokio::spawn(async move { requester.start_requester().await });
+
+    // let _ = tokio::join!(
+    //     requester.start_requester(),
+    //     app.run_app(&mut terminal, &client, &mut clipboard, state_tx.clone()),
+    // );
 
     disable_raw_mode()?;
     crossterm::execute!(

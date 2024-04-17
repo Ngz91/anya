@@ -7,17 +7,17 @@ use ratatui::{
     widgets::{Block, Borders},
     Frame, Terminal,
 };
+use tokio::sync::mpsc;
 use tui_textarea::{Input, Key, TextArea};
 
-use crate::errors;
-use crate::utils;
-use crate::MainLayout;
+use crate::{errors, utils, MainLayout, State};
 
 #[derive(Default)]
 pub struct App<'a> {
     response: Option<serde_json::Value>,
     textarea: [TextArea<'a>; 2],
     which: usize,
+    state: State,
 }
 
 impl App<'_> {
@@ -30,6 +30,7 @@ impl App<'_> {
         terminal: &mut Terminal<B>,
         client: &reqwest::Client,
         clipboard: &mut Clipboard,
+        state_tx: mpsc::Sender<State>,
     ) -> io::Result<()> {
         self.textarea[0].insert_str("https://");
 
@@ -45,7 +46,10 @@ impl App<'_> {
                     key: Key::Char('q'),
                     ctrl: true,
                     ..
-                } => return Ok(()),
+                } => {
+                    state_tx.send(self.state.clone()).await.unwrap();
+                    return Ok(());
+                }
                 Input {
                     key: Key::Char('x'),
                     ctrl: true,
