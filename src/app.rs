@@ -7,10 +7,22 @@ use ratatui::{
     widgets::{Block, Borders},
     Frame, Terminal,
 };
-use tokio::sync::mpsc;
 use tui_textarea::{Input, Key, TextArea};
 
 use crate::{errors, utils, MainLayout, State};
+
+async fn testing_making_req(
+    client_builder: reqwest::RequestBuilder,
+) -> std::result::Result<serde_json::Value, errors::CustomError> {
+    tokio::time::sleep(Duration::from_secs(1)).await;
+    let resp = client_builder
+        .send()
+        .await?
+        .json::<serde_json::Value>()
+        .await?;
+
+    Ok(resp)
+}
 
 #[derive(Default)]
 pub struct App<'a> {
@@ -30,10 +42,8 @@ impl App<'_> {
         terminal: &mut Terminal<B>,
         client: &reqwest::Client,
         clipboard: &mut Clipboard,
-        state_tx: mpsc::Sender<State>,
     ) -> io::Result<()> {
         self.textarea[0].insert_str("https://");
-        state_tx.send(self.state.clone()).await.unwrap();
 
         loop {
             terminal.draw(|f| {
@@ -48,8 +58,8 @@ impl App<'_> {
                     ctrl: true,
                     ..
                 } => {
-                    self.state = State::Exit;
-                    state_tx.send(self.state.clone()).await.unwrap();
+                    // self.state = State::Exit;
+                    // state_tx.send(self.state.clone()).await.unwrap();
                     return Ok(());
                 }
                 Input {
@@ -65,8 +75,15 @@ impl App<'_> {
                     ctrl: true,
                     ..
                 } => {
-                    let resp = self.request(client, reqwest::Method::GET).await;
-                    self.set_response(resp)
+                    // let resp = self.request(client, reqwest::Method::GET).await;
+                    // self.set_response(resp)
+                    self.state = State::Running;
+                    let client_builder = self.build_client(client, reqwest::Method::GET).unwrap();
+                    let resp = tokio::spawn(async { testing_making_req(client_builder).await });
+
+                    self.set_response(resp.await.unwrap());
+
+                    self.state = State::Idle;
                 }
                 // POST method
                 Input {
@@ -126,6 +143,10 @@ impl App<'_> {
         f.render_widget(self.textarea[1].widget(), layout.request_layout[1]);
         f.render_widget(response_block, layout.response_layout[0]);
 
+        if self.state == State::Running {
+            self.response = Some(serde_json::json!({"Message": "Processing"}));
+        }
+
         if let Some(resp) = &self.response {
             let resp = serde_json::to_string_pretty(resp).unwrap();
             let response_paragraph = utils::create_text(&resp, vec![2, 2, 1, 2]);
@@ -172,6 +193,36 @@ impl App<'_> {
             .await?;
 
         Ok(resp)
+    }
+
+    fn build_client(
+        &mut self,
+        client: &reqwest::Client,
+        method: reqwest::Method,
+    ) -> Result<reqwest::RequestBuilder, errors::CustomError> {
+        let request_url = &self.textarea[0].lines()[0];
+
+        let has_json = !self.textarea[1].lines()[0].is_empty();
+
+        let mut request_builder = client
+            .request(method, request_url)
+            .timeout(Duration::from_secs(5));
+
+        match has_json {
+            true => {
+                let request_json = &self.textarea[1].lines().join("");
+                let json_value: serde_json::Value = match serde_json::from_str(request_json) {
+                    Ok(value) => value,
+                    Err(err) => {
+                        return Err(errors::handle_serde_json_error(err));
+                    }
+                };
+                request_builder = request_builder.json(&json_value);
+            }
+            false => {} // Do nothing, no JSON
+        }
+
+        Ok(request_builder)
     }
 
     fn set_response(

@@ -1,6 +1,3 @@
-use std::process::Termination;
-use std::time::Duration;
-
 use tokio::sync::mpsc;
 
 use crate::errors;
@@ -11,6 +8,7 @@ pub struct Requester {
     state_rx: mpsc::Receiver<State>,
     request_rx: mpsc::Receiver<reqwest::RequestBuilder>,
     response_tx: mpsc::Sender<Result<serde_json::Value, errors::CustomError>>,
+    last_request: Option<reqwest::RequestBuilder>,
 }
 
 impl Requester {
@@ -18,18 +16,20 @@ impl Requester {
         state_rx: mpsc::Receiver<State>,
         request_rx: mpsc::Receiver<reqwest::RequestBuilder>,
         response_tx: mpsc::Sender<Result<serde_json::Value, errors::CustomError>>,
+        last_request: Option<reqwest::RequestBuilder>,
     ) -> Self {
         Requester {
             state_rx,
             request_rx,
             response_tx,
+            last_request,
         }
     }
 
     pub async fn start_requester(&mut self) {
         println!("Requester initialized");
-        if self.state_rx.recv().await.unwrap() != State::Exit {
-            println!("Requester ready");
+        while self.state_rx.recv().await.unwrap() != State::Exit {
+            println!("Requester Here")
         }
         println!("Requester Shutdown");
     }
