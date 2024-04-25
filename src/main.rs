@@ -3,10 +3,8 @@ use crossterm::{
     event::{DisableMouseCapture, EnableMouseCapture},
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
-use errors::CustomError;
 use ratatui::prelude::{CrosstermBackend, Terminal};
 use std::io;
-use tokio::sync::mpsc;
 
 pub mod app;
 pub mod errors;
@@ -17,7 +15,6 @@ pub mod utils;
 use crate::layout::MainLayout;
 
 use app::App;
-use requester::Requester;
 
 #[derive(Default, Clone, Debug, PartialEq, Eq)]
 pub enum State {
