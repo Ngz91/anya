@@ -13,6 +13,8 @@ use crate::errors;
 use crate::utils;
 use crate::MainLayout;
 
+type RequestResult = std::result::Result<serde_json::Value, errors::CustomError>;
+
 #[derive(Default)]
 pub struct App<'a> {
     response: Option<serde_json::Value>,
@@ -136,7 +138,7 @@ impl App<'_> {
         &mut self,
         client: &reqwest::Client,
         method: reqwest::Method,
-    ) -> std::result::Result<serde_json::Value, errors::CustomError> {
+    ) -> RequestResult {
         let request_url = &self.textarea[0].lines()[0];
 
         let has_json = !self.textarea[1].lines()[0].is_empty();
@@ -168,10 +170,7 @@ impl App<'_> {
         Ok(resp)
     }
 
-    fn set_response(
-        &mut self,
-        response: std::result::Result<serde_json::Value, errors::CustomError>,
-    ) {
+    fn set_response(&mut self, response: RequestResult) {
         self.response = match response {
             Ok(resp) => Some(resp),
             Err(err) => Some(serde_json::json!({
