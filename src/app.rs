@@ -11,15 +11,16 @@ use tui_textarea::{Input, Key, TextArea};
 
 use crate::{errors, utils, MainLayout, State};
 
-async fn testing_making_req(
-    client_builder: reqwest::RequestBuilder,
+async fn make_request(
+    client_builder: Result<reqwest::RequestBuilder, errors::CustomError>,
 ) -> std::result::Result<serde_json::Value, errors::CustomError> {
-    let resp = client_builder
-        .send()
-        .await?
-        .json::<serde_json::Value>()
-        .await?;
-    Ok(resp)
+    match client_builder {
+        Ok(client) => {
+            let resp = client.send().await?.json::<serde_json::Value>().await?;
+            Ok(resp)
+        }
+        Err(err) => Err(err),
+    }
 }
 
 type RequestResult = std::result::Result<serde_json::Value, errors::CustomError>;
@@ -73,9 +74,9 @@ impl App<'_> {
                     ctrl: true,
                     ..
                 } => {
-                    let client_builder = self.build_client(client, reqwest::Method::GET).unwrap();
+                    let client_builder = self.build_client(client, reqwest::Method::GET);
                     tokio::select! {
-                        response = testing_making_req(client_builder) => {
+                        response = make_request(client_builder) => {
                             self.set_response(response)
                         }
                     }
@@ -86,9 +87,9 @@ impl App<'_> {
                     ctrl: true,
                     ..
                 } => {
-                    let client_builder = self.build_client(client, reqwest::Method::POST).unwrap();
+                    let client_builder = self.build_client(client, reqwest::Method::POST);
                     tokio::select! {
-                        response = testing_making_req(client_builder) => {
+                        response = make_request(client_builder) => {
                             self.set_response(response)
                         }
                     }
