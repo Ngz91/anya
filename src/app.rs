@@ -1,8 +1,4 @@
-use std::{
-    io,
-    sync::{Arc, Mutex},
-    time::Duration,
-};
+use std::{io, time::Duration};
 
 use arboard::Clipboard;
 use ratatui::{
@@ -11,29 +7,19 @@ use ratatui::{
     widgets::{Block, Borders},
     Frame, Terminal,
 };
-use tokio::sync::mpsc;
 use tui_textarea::{Input, Key, TextArea};
 
 use crate::{errors, utils, MainLayout, State};
 
 async fn testing_making_req(
     client_builder: reqwest::RequestBuilder,
-    response_tx: mpsc::Sender<Result<serde_json::Value, errors::CustomError>>,
-    response_sender: Arc<Mutex<tokio::sync::watch::Sender<serde_json::Value>>>,
-) -> std::result::Result<(), errors::CustomError> {
+) -> std::result::Result<serde_json::Value, errors::CustomError> {
     let resp = client_builder
         .send()
         .await?
         .json::<serde_json::Value>()
         .await?;
-
-    let _ = response_tx.send(Ok(resp.clone())).await;
-    let _ = response_sender.lock().unwrap().send(resp.clone());
-
-    drop(response_sender);
-    response_tx.closed().await;
-
-    Ok(())
+    Ok(resp)
 }
 
 type RequestResult = std::result::Result<serde_json::Value, errors::CustomError>;
@@ -58,13 +44,6 @@ impl App<'_> {
         clipboard: &mut Clipboard,
     ) -> io::Result<()> {
         self.textarea[0].insert_str("https://");
-        let (response_tx, mut response_rx) =
-            mpsc::channel::<Result<serde_json::Value, errors::CustomError>>(1);
-        let response_sender = Arc::new(Mutex::new(tokio::sync::watch::Sender::new(
-            serde_json::json!({}),
-        )));
-        let mut response_watcher = response_sender.lock().unwrap().subscribe();
-
         loop {
             terminal.draw(|f| {
                 let layout = MainLayout::new(f);
@@ -78,9 +57,7 @@ impl App<'_> {
                     ctrl: true,
                     ..
                 } => {
-                    // self.state = State::Exit;
-                    // state_tx.send(self.state.clone()).await.unwrap();
-                    response_rx.close();
+                    self.state = State::Exit;
                     return Ok(());
                 }
                 Input {
@@ -96,14 +73,12 @@ impl App<'_> {
                     ctrl: true,
                     ..
                 } => {
-                    // let resp = self.request(client, reqwest::Method::GET).await;
-                    // self.set_response(resp)
-                    let local_tx = response_tx.clone();
-                    let test_tx = Arc::clone(&response_sender);
                     let client_builder = self.build_client(client, reqwest::Method::GET).unwrap();
-                    tokio::spawn(async move {
-                        testing_making_req(client_builder, local_tx, test_tx).await
-                    });
+                    tokio::select! {
+                        response = testing_making_req(client_builder) => {
+                            self.set_response(response)
+                        }
+                    }
                 }
                 // POST method
                 Input {
@@ -111,15 +86,12 @@ impl App<'_> {
                     ctrl: true,
                     ..
                 } => {
-                    // let resp = self.request(client, reqwest::Method::POST).await;
-                    // self.set_response(resp)
-
-                    let local_tx = response_tx.clone();
-                    let test_tx = Arc::clone(&response_sender);
                     let client_builder = self.build_client(client, reqwest::Method::POST).unwrap();
-                    tokio::spawn(async move {
-                        testing_making_req(client_builder, local_tx, test_tx).await
-                    });
+                    tokio::select! {
+                        response = testing_making_req(client_builder) => {
+                            self.set_response(response)
+                        }
+                    }
                 }
                 // Paste clipboard contents into the active textarea
                 Input {
@@ -142,20 +114,7 @@ impl App<'_> {
                     self.handle_inputs(input);
                 }
             }
-            match response_watcher.has_changed() {
-                Ok(received_data) => {
-                    if received_data {
-                        self.test_set_response(response_watcher.borrow_and_update().clone())
-                    }
-                }
-                Err(_e) => {}
-            }
-            // self.set_response(response_rx.try_recv().unwrap())
         }
-    }
-
-    fn test_set_response(&mut self, response: serde_json::Value) {
-        self.response = Some(response);
     }
     fn render_ui(&mut self, f: &mut Frame, layout: &MainLayout) {
         self.textarea[0].set_block(
@@ -193,43 +152,6 @@ impl App<'_> {
         utils::activate(&mut self.textarea[0]);
         utils::deactivate(&mut self.textarea[1]);
     }
-
-    async fn request(
-        &mut self,
-        client: &reqwest::Client,
-        method: reqwest::Method,
-    ) -> RequestResult {
-        let request_url = &self.textarea[0].lines()[0];
-
-        let has_json = !self.textarea[1].lines()[0].is_empty();
-
-        let mut request_builder = client
-            .request(method, request_url)
-            .timeout(Duration::from_secs(5));
-
-        match has_json {
-            true => {
-                let request_json = &self.textarea[1].lines().join("");
-                let json_value: serde_json::Value = match serde_json::from_str(request_json) {
-                    Ok(value) => value,
-                    Err(err) => {
-                        return Err(errors::handle_serde_json_error(err));
-                    }
-                };
-                request_builder = request_builder.json(&json_value);
-            }
-            false => {} // Do nothing, no JSON
-        }
-
-        let resp = request_builder
-            .send()
-            .await?
-            .json::<serde_json::Value>()
-            .await?;
-
-        Ok(resp)
-    }
-
 
     fn build_client(
         &mut self,
