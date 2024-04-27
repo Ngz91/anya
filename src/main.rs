@@ -15,20 +15,12 @@ use crate::layout::MainLayout;
 
 use app::App;
 
-#[derive(Default, Clone, Debug, PartialEq, Eq)]
-pub enum State {
-    #[default]
-    Idle,
-    Running,
-    Exit,
-}
-
 #[tokio::main]
 async fn main() -> io::Result<()> {
     let mut clipboard = Clipboard::new().unwrap();
 
-    let stdout = io::stdout();
-    let mut stdout = stdout.lock();
+    let mut stdout = io::stdout();
+
     enable_raw_mode()?;
     crossterm::execute!(stdout, EnterAlternateScreen, EnableMouseCapture)?;
 
@@ -39,20 +31,15 @@ async fn main() -> io::Result<()> {
     let client = reqwest::Client::new();
 
     app.activate_deactivate_textarea();
+    app.run_app(&mut terminal, &client, &mut clipboard).await?;
 
-    let res = app.run_app(&mut terminal, &client, &mut clipboard).await;
-
-    disable_raw_mode()?;
     crossterm::execute!(
         terminal.backend_mut(),
         LeaveAlternateScreen,
         DisableMouseCapture,
     )?;
     terminal.show_cursor()?;
-
-    if let Err(err) = res {
-        println!("Error encountered: {err:?}")
-    }
+    disable_raw_mode()?;
 
     Ok(())
 }

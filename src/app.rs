@@ -1,6 +1,7 @@
 use std::{io, time::Duration};
 
 use arboard::Clipboard;
+// use crossterm::event::{self, Event, KeyEventKind};
 use ratatui::{
     backend::Backend,
     style::Stylize,
@@ -9,7 +10,9 @@ use ratatui::{
 };
 use tui_textarea::{Input, Key, TextArea};
 
-use crate::{errors, utils, MainLayout, State};
+use crate::{errors, utils, MainLayout};
+
+type RequestResult = std::result::Result<serde_json::Value, errors::CustomError>;
 
 async fn make_request(
     client_builder: Result<reqwest::RequestBuilder, errors::CustomError>,
@@ -23,7 +26,13 @@ async fn make_request(
     }
 }
 
-type RequestResult = std::result::Result<serde_json::Value, errors::CustomError>;
+#[derive(Default, Clone, Debug, PartialEq, Eq)]
+pub enum State {
+    #[default]
+    Idle,
+    Running,
+    Exit,
+}
 
 #[derive(Default)]
 pub struct App<'a> {
@@ -50,6 +59,15 @@ impl App<'_> {
                 let layout = MainLayout::new(f);
                 self.render_ui(f, &layout);
             })?;
+
+            // TODO Test new way of handling events and create a handle envents method
+            // if event::poll(Duration::from_millis(250)).unwrap() {
+            //     if let Event::Key(key_event) = event::read().unwrap() {
+            //         if key_event.kind == KeyEventKind::Press {
+            //             println!("{:#?}", key_event)
+            //         }
+            //     }
+            // }
 
             match crossterm::event::read()?.into() {
                 Input { key: Key::Esc, .. }
