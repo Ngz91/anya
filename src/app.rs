@@ -1,7 +1,7 @@
 use std::{io, time::Duration};
 
 use arboard::Clipboard;
-// use crossterm::event::{self, Event, KeyEventKind};
+use crossterm::event::{self, Event};
 use ratatui::{
     backend::Backend,
     style::Stylize,
@@ -54,87 +54,93 @@ impl App<'_> {
         clipboard: &mut Clipboard,
     ) -> io::Result<()> {
         self.textarea[0].insert_str("https://");
+        let tick_rate = Duration::from_millis(250);
+
         loop {
             terminal.draw(|f| {
                 let layout = MainLayout::new(f);
                 self.render_ui(f, &layout);
             })?;
-
-            // TODO Test new way of handling events and create a handle envents method
-            // if event::poll(Duration::from_millis(250)).unwrap() {
-            //     if let Event::Key(key_event) = event::read().unwrap() {
-            //         if key_event.kind == KeyEventKind::Press {
-            //             println!("{:#?}", key_event)
-            //         }
-            //     }
-            // }
-
-            match crossterm::event::read()?.into() {
-                Input { key: Key::Esc, .. }
-                | Input {
-                    key: Key::Char('q'),
-                    ctrl: true,
-                    ..
-                } => {
-                    self.state = State::Exit;
-                    return Ok(());
-                }
-                Input {
-                    key: Key::Char('x'),
-                    ctrl: true,
-                    ..
-                } => {
-                    self.change_textarea();
-                }
-                // GET method
-                Input {
-                    key: Key::Char('g'),
-                    ctrl: true,
-                    ..
-                } => {
-                    let client_builder = self.build_client(client, reqwest::Method::GET);
-                    tokio::select! {
-                        response = make_request(client_builder) => {
-                            self.set_response(response)
-                        }
+            if crossterm::event::poll(tick_rate)? {
+                if let Event::Key(key_event) = event::read().unwrap() {
+                    let input = key_event.into();
+                    self.handle_events(input, client, clipboard).await;
+                    if self.state == State::Exit {
+                        return Ok(());
                     }
-                }
-                // POST method
-                Input {
-                    key: Key::Char('h'),
-                    ctrl: true,
-                    ..
-                } => {
-                    let client_builder = self.build_client(client, reqwest::Method::POST);
-                    tokio::select! {
-                        response = make_request(client_builder) => {
-                            self.set_response(response)
-                        }
-                    }
-                }
-                // Paste clipboard contents into the active textarea
-                Input {
-                    key: Key::Char('l'),
-                    ctrl: true,
-                    ..
-                } => {
-                    let clip_text = clipboard.get_text().unwrap();
-                    self.textarea[self.which].insert_str(clip_text);
-                }
-                // Select textarea contents
-                Input {
-                    key: Key::Char('k'),
-                    ctrl: true,
-                    ..
-                } => {
-                    self.textarea[self.which].select_all();
-                }
-                input => {
-                    self.handle_inputs(input);
                 }
             }
         }
     }
+
+    async fn handle_events(
+        &mut self,
+        input: Input,
+        client: &reqwest::Client,
+        clipboard: &mut Clipboard,
+    ) {
+        match input {
+            Input { key: Key::Esc, .. }
+            | Input {
+                key: Key::Char('q'),
+                ctrl: true,
+                ..
+            } => self.state = State::Exit,
+
+            Input {
+                key: Key::Char('x'),
+                ctrl: true,
+                ..
+            } => {
+                self.change_textarea();
+            }
+            // GET method
+            Input {
+                key: Key::Char('g'),
+                ctrl: true,
+                ..
+            } => {
+                let client_builder = self.build_client(client, reqwest::Method::GET);
+                tokio::select! {
+                    response = make_request(client_builder) => {
+                        self.set_response(response)
+                    }
+                }
+            }
+            // POST method
+            Input {
+                key: Key::Char('h'),
+                ctrl: true,
+                ..
+            } => {
+                let client_builder = self.build_client(client, reqwest::Method::POST);
+                tokio::select! {
+                    response = make_request(client_builder) => {
+                        self.set_response(response)
+                    }
+                }
+            }
+            // Paste clipboard contents into the active textarea
+            Input {
+                key: Key::Char('l'),
+                ctrl: true,
+                ..
+            } => {
+                let clip_text = clipboard.get_text().unwrap();
+                self.textarea[self.which].insert_str(clip_text);
+            }
+            // Select textarea contents
+            Input {
+                key: Key::Char('k'),
+                ctrl: true,
+                ..
+            } => {
+                self.textarea[self.which].select_all();
+            }
+            _ => self.render_inputs(input),
+        }
+    }
+
     fn render_ui(&mut self, f: &mut Frame, layout: &MainLayout) {
         self.textarea[0].set_block(
             Block::default()
@@ -217,7 +223,7 @@ impl App<'_> {
         utils::activate(&mut self.textarea[self.which])
     }
 
-    fn handle_inputs(&mut self, input: Input) {
+    fn render_inputs(&mut self, input: Input) {
         self.textarea[self.which].input(input);
     }
 }
