@@ -7,6 +7,7 @@ use ratatui::{
     widgets::{Block, Borders},
     Frame, Terminal,
 };
+use tokio::sync::{mpsc, watch};
 use tui_textarea::{Input, Key, TextArea};
 
 use crate::errors;
@@ -30,6 +31,9 @@ impl App<'_> {
         terminal: &mut Terminal<B>,
         client: &reqwest::Client,
         clipboard: &mut Clipboard,
+        cancel_send: watch::Sender<bool>,
+        request_tx: mpsc::UnboundedSender<reqwest::RequestBuilder>,
+        response_rx: mpsc::UnboundedReceiver<Result<serde_json::Value, errors::CustomError>>,
     ) -> io::Result<()> {
         self.textarea[0].insert_str("https://");
 
@@ -45,7 +49,10 @@ impl App<'_> {
                     key: Key::Char('q'),
                     ctrl: true,
                     ..
-                } => return Ok(()),
+                } => {
+                    let _ = cancel_send.send(true);
+                    return Ok(());
+                }
                 Input {
                     key: Key::Char('x'),
                     ctrl: true,

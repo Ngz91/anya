@@ -1,14 +1,17 @@
 use arboard::Clipboard;
 use crossterm::{
-    event::{DisableMouseCapture, EnableMouseCapture},
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
+    ExecutableCommand,
 };
 use ratatui::prelude::{CrosstermBackend, Terminal};
+use requester::listen_requests;
 use std::io;
+use tokio::sync::{mpsc, watch};
 
 pub mod app;
 pub mod errors;
 pub mod layout;
+pub mod requester;
 pub mod utils;
 
 use crate::layout::MainLayout;
@@ -17,29 +20,39 @@ use app::App;
 
 #[tokio::main]
 async fn main() -> io::Result<()> {
-    let mut clipboard = Clipboard::new().unwrap();
-    let stdout = io::stdout();
-    let mut stdout = stdout.lock();
-    enable_raw_mode()?;
-    crossterm::execute!(stdout, EnterAlternateScreen, EnableMouseCapture)?;
+    let (cancel_send, cancel_watch) = watch::channel(false);
+    let (response_tx, response_rx) =
+        mpsc::unbounded_channel::<Result<serde_json::Value, errors::CustomError>>();
+    let (request_tx, request_rx) = mpsc::unbounded_channel::<reqwest::RequestBuilder>();
 
-    let backend = CrosstermBackend::new(stdout);
+    let mut clipboard = Clipboard::new().unwrap();
+    io::stdout().execute(EnterAlternateScreen)?;
+    enable_raw_mode()?;
+
+    let backend = CrosstermBackend::new(io::stdout());
     let mut terminal = Terminal::new(backend)?;
+    terminal.clear()?;
 
     let mut app = App::new();
     let client = reqwest::Client::new();
 
     app.activate_deactivate_textarea();
 
-    let res = app.run_app(&mut terminal, &client, &mut clipboard).await;
+    tokio::spawn(listen_requests(cancel_watch, request_rx, response_tx));
+    let res = app
+        .run_app(
+            &mut terminal,
+            &client,
+            &mut clipboard,
+            cancel_send,
+            request_tx,
+            response_rx,
+        )
+        .await;
 
-    disable_raw_mode()?;
-    crossterm::execute!(
-        terminal.backend_mut(),
-        LeaveAlternateScreen,
-        DisableMouseCapture,
-    )?;
+    io::stdout().execute(LeaveAlternateScreen)?;
     terminal.show_cursor()?;
+    disable_raw_mode()?;
 
     if let Err(err) = res {
         println!("Error encountered: {err:?}")
