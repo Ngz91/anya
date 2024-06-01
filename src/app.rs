@@ -8,24 +8,25 @@ use ratatui::{
     widgets::{Block, Borders},
     Frame, Terminal,
 };
-use tokio::sync::{mpsc, watch};
+use tokio::{
+    select,
+    sync::{mpsc, watch},
+};
 use tui_textarea::{Input, Key, TextArea};
 
-use crate::{errors, utils, MainLayout};
+use crate::{errors, local_types::ResultSerde, utils, MainLayout};
 
-type RequestResult = std::result::Result<serde_json::Value, errors::CustomError>;
-
-async fn make_request(
-    client_builder: Result<reqwest::RequestBuilder, errors::CustomError>,
-) -> std::result::Result<serde_json::Value, errors::CustomError> {
-    match client_builder {
-        Ok(client) => {
-            let resp = client.send().await?.json::<serde_json::Value>().await?;
-            Ok(resp)
-        }
-        Err(err) => Err(err),
-    }
-}
+// async fn make_request(
+//     client_builder: Result<reqwest::RequestBuilder, errors::CustomError>,
+// ) -> std::result::Result<serde_json::Value, errors::CustomError> {
+//     match client_builder {
+//         Ok(client) => {
+//             let resp = client.send().await?.json::<serde_json::Value>().await?;
+//             Ok(resp)
+//         }
+//         Err(err) => Err(err),
+//     }
+// }
 
 #[derive(Default, Clone, Debug, PartialEq, Eq)]
 pub enum State {
@@ -55,7 +56,7 @@ impl App<'_> {
         clipboard: &mut Clipboard,
         cancel_send: watch::Sender<bool>,
         request_tx: mpsc::UnboundedSender<reqwest::RequestBuilder>,
-        response_rx: mpsc::UnboundedReceiver<Result<serde_json::Value, errors::CustomError>>,
+        mut response_rx: mpsc::UnboundedReceiver<ResultSerde>,
     ) -> io::Result<()> {
         self.textarea[0].insert_str("https://");
         let tick_rate = Duration::from_millis(250);
@@ -94,11 +95,12 @@ impl App<'_> {
                             ..
                         } => {
                             let client_builder = self.build_client(client, reqwest::Method::GET);
-                            tokio::select! {
-                                response = make_request(client_builder) => {
-                                    self.set_response(response)
-                                }
-                            }
+                            // tokio::select! {
+                            //     response = make_request(client_builder) => {
+                            //         self.set_response(response)
+                            //     }
+                            // }
+                            let _ = request_tx.send(client_builder.unwrap());
                         }
                         // POST method
                         Input {
@@ -107,11 +109,12 @@ impl App<'_> {
                             ..
                         } => {
                             let client_builder = self.build_client(client, reqwest::Method::POST);
-                            tokio::select! {
-                                response = make_request(client_builder) => {
-                                    self.set_response(response)
-                                }
-                            }
+                            // tokio::select! {
+                            //     response = make_request(client_builder) => {
+                            //         self.set_response(response)
+                            //     }
+                            // }
+                            let _ = request_tx.send(client_builder.unwrap());
                         }
                         // Paste clipboard contents into the active textarea
                         Input {
@@ -208,8 +211,8 @@ impl App<'_> {
         Ok(request_builder)
     }
 
-    fn set_response(&mut self, response: RequestResult) {
-        self.response = match response {
+    async fn set_response(&mut self, mut response_rx: mpsc::UnboundedReceiver<ResultSerde>) {
+        self.response = match response_rx.recv().await.unwrap() {
             Ok(resp) => Some(resp),
             Err(err) => Some(serde_json::json!({
                 "Request error": err.to_string()

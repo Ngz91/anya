@@ -3,6 +3,7 @@ use crossterm::{
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
     ExecutableCommand,
 };
+use local_types::ResultSerde;
 use ratatui::prelude::{CrosstermBackend, Terminal};
 use requester::listen_requests;
 use std::io;
@@ -11,6 +12,7 @@ use tokio::sync::{mpsc, watch};
 pub mod app;
 pub mod errors;
 pub mod layout;
+pub mod local_types;
 pub mod requester;
 pub mod utils;
 
@@ -21,8 +23,7 @@ use app::App;
 #[tokio::main]
 async fn main() -> io::Result<()> {
     let (cancel_send, cancel_watch) = watch::channel(false);
-    let (response_tx, response_rx) =
-        mpsc::unbounded_channel::<Result<serde_json::Value, errors::CustomError>>();
+    let (response_tx, response_rx) = mpsc::unbounded_channel::<ResultSerde>();
     let (request_tx, request_rx) = mpsc::unbounded_channel::<reqwest::RequestBuilder>();
 
     let mut clipboard = Clipboard::new().unwrap();
