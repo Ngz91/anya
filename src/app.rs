@@ -4,14 +4,12 @@ use arboard::Clipboard;
 use crossterm::event::{self, Event};
 use ratatui::{
     backend::Backend,
+    layout::{Constraint, Direction, Layout, Rect},
     style::Stylize,
-    widgets::{Block, Borders},
+    widgets::{Block, Borders, Paragraph},
     Frame, Terminal,
 };
-use tokio::sync::{
-    mpsc::{self, error::TryRecvError},
-    watch,
-};
+use tokio::sync::{mpsc, watch};
 use tui_textarea::{Input, Key, TextArea};
 
 use crate::{errors, local_types::ResultSerde, utils, MainLayout};
@@ -56,68 +54,72 @@ impl App<'_> {
             })?;
             if crossterm::event::poll(tick_rate)? {
                 if let Event::Key(key_event) = event::read().unwrap() {
-                    let input = key_event.into();
+                    if self.state == State::Idle {
+                        let input = key_event.into();
 
-                    match input {
-                        Input { key: Key::Esc, .. }
-                        | Input {
-                            key: Key::Char('q'),
-                            ctrl: true,
-                            ..
-                        } => {
-                            let _ = cancel_send.send(true);
-                            self.state = State::Exit
+                        match input {
+                            Input { key: Key::Esc, .. }
+                            | Input {
+                                key: Key::Char('q'),
+                                ctrl: true,
+                                ..
+                            } => {
+                                let _ = cancel_send.send(true);
+                                self.state = State::Exit
+                            }
+
+                            Input {
+                                key: Key::Char('x'),
+                                ctrl: true,
+                                ..
+                            } => {
+                                self.change_textarea();
+                            }
+                            // GET method
+                            Input {
+                                key: Key::Char('g'),
+                                ctrl: true,
+                                ..
+                            } => {
+                                let client_builder =
+                                    self.build_client(client, reqwest::Method::GET);
+                                let _ = request_tx.send(client_builder.unwrap());
+                                self.state = State::Running
+                            }
+                            // POST method
+                            Input {
+                                key: Key::Char('h'),
+                                ctrl: true,
+                                ..
+                            } => {
+                                let client_builder =
+                                    self.build_client(client, reqwest::Method::POST);
+                                let _ = request_tx.send(client_builder.unwrap());
+                                self.state = State::Running
+                            }
+                            // Paste clipboard contents into the active textarea
+                            Input {
+                                key: Key::Char('l'),
+                                ctrl: true,
+                                ..
+                            } => {
+                                let clip_text = clipboard.get_text().unwrap();
+                                self.textarea[self.which].insert_str(clip_text);
+                            }
+                            // Select textarea contents
+                            Input {
+                                key: Key::Char('k'),
+                                ctrl: true,
+                                ..
+                            } => {
+                                self.textarea[self.which].select_all();
+                            }
+                            _ => self.render_inputs(input),
                         }
 
-                        Input {
-                            key: Key::Char('x'),
-                            ctrl: true,
-                            ..
-                        } => {
-                            self.change_textarea();
+                        if self.state == State::Exit {
+                            return Ok(());
                         }
-                        // GET method
-                        Input {
-                            key: Key::Char('g'),
-                            ctrl: true,
-                            ..
-                        } => {
-                            let client_builder = self.build_client(client, reqwest::Method::GET);
-                            let _ = request_tx.send(client_builder.unwrap());
-                            self.state = State::Running
-                        }
-                        // POST method
-                        Input {
-                            key: Key::Char('h'),
-                            ctrl: true,
-                            ..
-                        } => {
-                            let client_builder = self.build_client(client, reqwest::Method::POST);
-                            let _ = request_tx.send(client_builder.unwrap());
-                            self.state = State::Running
-                        }
-                        // Paste clipboard contents into the active textarea
-                        Input {
-                            key: Key::Char('l'),
-                            ctrl: true,
-                            ..
-                        } => {
-                            let clip_text = clipboard.get_text().unwrap();
-                            self.textarea[self.which].insert_str(clip_text);
-                        }
-                        // Select textarea contents
-                        Input {
-                            key: Key::Char('k'),
-                            ctrl: true,
-                            ..
-                        } => {
-                            self.textarea[self.which].select_all();
-                        }
-                        _ => self.render_inputs(input),
-                    }
-
-                    if self.state == State::Exit {
-                        return Ok(());
                     }
                 }
                 match response_rx.try_recv() {
@@ -125,8 +127,8 @@ impl App<'_> {
                         self.set_response(res);
                         self.state = State::Idle
                     }
-                    Err(TryRecvError::Empty) => continue,
-                    Err(TryRecvError::Disconnected) => {}
+                    Err(mpsc::error::TryRecvError::Empty) => continue,
+                    Err(mpsc::error::TryRecvError::Disconnected) => {}
                 }
             }
         }
@@ -157,16 +159,52 @@ impl App<'_> {
         f.render_widget(self.textarea[1].widget(), layout.request_layout[1]);
         f.render_widget(response_block, layout.response_layout[0]);
 
-        // TODO render a box in the middle of the terminal with a processing message
-        // if self.state == State::Running {
-        //     println!("Running");
-        // }
+        if self.state == State::Running {
+            self.render_popup(f);
+        }
 
         if let Some(resp) = &self.response {
             let resp = serde_json::to_string_pretty(resp).unwrap();
             let response_paragraph = utils::create_text(&resp, vec![2, 2, 1, 2]);
             f.render_widget(response_paragraph, layout.response_layout[0])
         }
+    }
+
+    fn render_popup(&mut self, f: &mut Frame) {
+        let popup_block = Block::default()
+            .borders(Borders::ALL)
+            .title("Message")
+            .bold()
+            .light_green();
+
+        let para = Paragraph::new("Processing...").block(popup_block);
+        let area = self.centered_rect(30, 6, f.size());
+
+        f.render_widget(ratatui::widgets::Clear, area);
+        f.render_widget(para, area);
+    }
+
+    /// helper function to create a centered rect using up certain percentage of the available rect `r`
+    fn centered_rect(&self, percent_x: u16, percent_y: u16, r: Rect) -> Rect {
+        // Cut the given rectangle into three vertical pieces
+        let popup_layout = Layout::default()
+            .direction(Direction::Vertical)
+            .constraints([
+                Constraint::Percentage((100 - percent_y) / 2),
+                Constraint::Percentage(percent_y),
+                Constraint::Percentage((100 - percent_y) / 2),
+            ])
+            .split(r);
+
+        // Then cut the middle vertical piece into three width-wise pieces
+        Layout::default()
+            .direction(Direction::Horizontal)
+            .constraints([
+                Constraint::Percentage((100 - percent_x) / 2),
+                Constraint::Percentage(percent_x),
+                Constraint::Percentage((100 - percent_x) / 2),
+            ])
+            .split(popup_layout[1])[1] // Return the middle chunk
     }
 
     pub fn activate_deactivate_textarea(&mut self) {
