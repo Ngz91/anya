@@ -8,25 +8,13 @@ use ratatui::{
     widgets::{Block, Borders},
     Frame, Terminal,
 };
-use tokio::{
-    select,
-    sync::{mpsc, watch},
+use tokio::sync::{
+    mpsc::{self, error::TryRecvError},
+    watch,
 };
 use tui_textarea::{Input, Key, TextArea};
 
 use crate::{errors, local_types::ResultSerde, utils, MainLayout};
-
-// async fn make_request(
-//     client_builder: Result<reqwest::RequestBuilder, errors::CustomError>,
-// ) -> std::result::Result<serde_json::Value, errors::CustomError> {
-//     match client_builder {
-//         Ok(client) => {
-//             let resp = client.send().await?.json::<serde_json::Value>().await?;
-//             Ok(resp)
-//         }
-//         Err(err) => Err(err),
-//     }
-// }
 
 #[derive(Default, Clone, Debug, PartialEq, Eq)]
 pub enum State {
@@ -95,12 +83,8 @@ impl App<'_> {
                             ..
                         } => {
                             let client_builder = self.build_client(client, reqwest::Method::GET);
-                            // tokio::select! {
-                            //     response = make_request(client_builder) => {
-                            //         self.set_response(response)
-                            //     }
-                            // }
                             let _ = request_tx.send(client_builder.unwrap());
+                            self.state = State::Running
                         }
                         // POST method
                         Input {
@@ -109,12 +93,8 @@ impl App<'_> {
                             ..
                         } => {
                             let client_builder = self.build_client(client, reqwest::Method::POST);
-                            // tokio::select! {
-                            //     response = make_request(client_builder) => {
-                            //         self.set_response(response)
-                            //     }
-                            // }
                             let _ = request_tx.send(client_builder.unwrap());
+                            self.state = State::Running
                         }
                         // Paste clipboard contents into the active textarea
                         Input {
@@ -139,6 +119,14 @@ impl App<'_> {
                     if self.state == State::Exit {
                         return Ok(());
                     }
+                }
+                match response_rx.try_recv() {
+                    Ok(res) => {
+                        self.set_response(res);
+                        self.state = State::Idle
+                    }
+                    Err(TryRecvError::Empty) => continue,
+                    Err(TryRecvError::Disconnected) => {}
                 }
             }
         }
@@ -168,6 +156,11 @@ impl App<'_> {
         f.render_widget(self.textarea[0].widget(), layout.request_layout[0]);
         f.render_widget(self.textarea[1].widget(), layout.request_layout[1]);
         f.render_widget(response_block, layout.response_layout[0]);
+
+        // TODO render a box in the middle of the terminal with a processing message
+        // if self.state == State::Running {
+        //     println!("Running");
+        // }
 
         if let Some(resp) = &self.response {
             let resp = serde_json::to_string_pretty(resp).unwrap();
@@ -211,8 +204,8 @@ impl App<'_> {
         Ok(request_builder)
     }
 
-    async fn set_response(&mut self, mut response_rx: mpsc::UnboundedReceiver<ResultSerde>) {
-        self.response = match response_rx.recv().await.unwrap() {
+    fn set_response(&mut self, response: ResultSerde) {
+        self.response = match response {
             Ok(resp) => Some(resp),
             Err(err) => Some(serde_json::json!({
                 "Request error": err.to_string()
