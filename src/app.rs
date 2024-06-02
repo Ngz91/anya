@@ -99,8 +99,13 @@ impl App<'_> {
                                 ctrl: true,
                                 ..
                             } => {
-                                let clip_text = clipboard.get_text().unwrap();
-                                self.textarea[self.which].insert_str(clip_text);
+                                let clip_text_result = clipboard.get_text();
+                                match clip_text_result {
+                                    Ok(clip_text) => {
+                                        self.textarea[self.which].insert_str(clip_text);
+                                    }
+                                    Err(_err) => {}
+                                }
                             }
                             // Select textarea contents
                             Input {
