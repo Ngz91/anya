@@ -1,7 +1,7 @@
 use std::{io, time::Duration};
 
 use arboard::Clipboard;
-use crossterm::event::{self, Event};
+use crossterm::event;
 use ratatui::{
     backend::Backend,
     layout::{Constraint, Direction, Layout, Rect},
@@ -14,12 +14,11 @@ use tui_textarea::{Input, Key, TextArea};
 
 use crate::{errors, local_types::ResultSerde, utils, MainLayout};
 
-#[derive(Default, Clone, Debug, PartialEq, Eq)]
-pub enum State {
+#[derive(Default, PartialEq, Eq)]
+enum State {
     #[default]
     Idle,
     Running,
-    Exit,
 }
 
 #[derive(Default)]
@@ -53,7 +52,7 @@ impl App<'_> {
                 self.render_ui(f, &layout);
             })?;
             if crossterm::event::poll(tick_rate)? {
-                if let Event::Key(key_event) = event::read().unwrap() {
+                if let event::Event::Key(key_event) = event::read().unwrap() {
                     if self.state == State::Idle {
                         let input = key_event.into();
 
@@ -65,9 +64,8 @@ impl App<'_> {
                                 ..
                             } => {
                                 let _ = cancel_send.send(true);
-                                self.state = State::Exit
+                                return Ok(());
                             }
-
                             Input {
                                 key: Key::Char('x'),
                                 ctrl: true,
@@ -116,10 +114,6 @@ impl App<'_> {
                             }
                             _ => self.render_inputs(input),
                         }
-
-                        if self.state == State::Exit {
-                            return Ok(());
-                        }
                     }
                 }
                 match response_rx.try_recv() {
@@ -159,6 +153,7 @@ impl App<'_> {
         f.render_widget(self.textarea[1].widget(), layout.request_layout[1]);
         f.render_widget(response_block, layout.response_layout[0]);
 
+        // If waiting for a response, render a popup
         if self.state == State::Running {
             self.render_popup(f);
         }
