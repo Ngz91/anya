@@ -79,10 +79,9 @@ impl App<'_> {
                                 ctrl: true,
                                 ..
                             } => {
-                                let client_builder =
+                                let client_builder_result =
                                     self.build_client(client, reqwest::Method::GET);
-                                let _ = request_tx.send(client_builder.unwrap());
-                                self.state = State::Running
+                                self.send_builder(client_builder_result, request_tx.clone());
                             }
                             // POST method
                             Input {
@@ -90,10 +89,9 @@ impl App<'_> {
                                 ctrl: true,
                                 ..
                             } => {
-                                let client_builder =
+                                let client_builder_result =
                                     self.build_client(client, reqwest::Method::POST);
-                                let _ = request_tx.send(client_builder.unwrap());
-                                self.state = State::Running
+                                self.send_builder(client_builder_result, request_tx.clone());
                             }
                             // Paste clipboard contents into the active textarea
                             Input {
@@ -126,6 +124,28 @@ impl App<'_> {
                 Err(mpsc::error::TryRecvError::Disconnected) => {}
             }
         }
+    }
+
+    fn send_builder(
+        &mut self,
+        builder_result: Result<reqwest::RequestBuilder, errors::CustomError>,
+        request_tx: mpsc::UnboundedSender<reqwest::RequestBuilder>,
+    ) {
+        match builder_result {
+            Ok(client_builder) => {
+                let _ = request_tx.send(client_builder);
+                self.state = State::Running;
+            }
+            Err(error) => {
+                self.response = Some(serde_json::json!({"Request error": error.to_string()}))
+            }
+        }
+        drop(request_tx);
+    }
+
+    pub fn activate_deactivate_textarea(&mut self) {
+        utils::activate(&mut self.textarea[0]);
+        utils::deactivate(&mut self.textarea[1]);
     }
 
     fn render_ui(&mut self, f: &mut Frame, layout: &MainLayout) {
@@ -200,11 +220,6 @@ impl App<'_> {
                 Constraint::Percentage((100 - percent_x) / 2),
             ])
             .split(popup_layout[1])[1] // Return the middle chunk
-    }
-
-    pub fn activate_deactivate_textarea(&mut self) {
-        utils::activate(&mut self.textarea[0]);
-        utils::deactivate(&mut self.textarea[1]);
     }
 
     fn build_client(
