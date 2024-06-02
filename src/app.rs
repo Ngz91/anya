@@ -1,37 +1,24 @@
 use std::{io, time::Duration};
 
 use arboard::Clipboard;
-use crossterm::event::{self, Event};
+use crossterm::event;
+
+use crate::{errors, local_types::ResultSerde, utils, MainLayout};
 use ratatui::{
     backend::Backend,
+    layout::{Constraint, Direction, Layout, Rect},
     style::Stylize,
-    widgets::{Block, Borders},
+    widgets::{Block, Borders, Paragraph},
     Frame, Terminal,
 };
+use tokio::sync::{mpsc, watch};
 use tui_textarea::{Input, Key, TextArea};
 
-use crate::{errors, utils, MainLayout};
-
-type RequestResult = std::result::Result<serde_json::Value, errors::CustomError>;
-
-async fn make_request(
-    client_builder: Result<reqwest::RequestBuilder, errors::CustomError>,
-) -> std::result::Result<serde_json::Value, errors::CustomError> {
-    match client_builder {
-        Ok(client) => {
-            let resp = client.send().await?.json::<serde_json::Value>().await?;
-            Ok(resp)
-        }
-        Err(err) => Err(err),
-    }
-}
-
-#[derive(Default, Clone, Debug, PartialEq, Eq)]
-pub enum State {
+#[derive(Default, PartialEq, Eq)]
+enum State {
     #[default]
     Idle,
     Running,
-    Exit,
 }
 
 #[derive(Default)]
@@ -52,6 +39,9 @@ impl App<'_> {
         terminal: &mut Terminal<B>,
         client: &reqwest::Client,
         clipboard: &mut Clipboard,
+        cancel_send: watch::Sender<bool>,
+        request_tx: mpsc::UnboundedSender<reqwest::RequestBuilder>,
+        mut response_rx: mpsc::UnboundedReceiver<ResultSerde>,
     ) -> io::Result<()> {
         self.textarea[0].insert_str("https://");
         let tick_rate = Duration::from_millis(250);
@@ -62,82 +52,79 @@ impl App<'_> {
                 self.render_ui(f, &layout);
             })?;
             if crossterm::event::poll(tick_rate)? {
-                if let Event::Key(key_event) = event::read().unwrap() {
-                    let input = key_event.into();
-                    self.handle_events(input, client, clipboard).await;
-                    if self.state == State::Exit {
-                        return Ok(());
-                    }
-                }
-            }
-        }
-    }
+                if let event::Event::Key(key_event) = event::read().unwrap() {
+                    if self.state == State::Idle {
+                        let input = key_event.into();
 
-    async fn handle_events(
-        &mut self,
-        input: Input,
-        client: &reqwest::Client,
-        clipboard: &mut Clipboard,
-    ) {
-        match input {
-            Input { key: Key::Esc, .. }
-            | Input {
-                key: Key::Char('q'),
-                ctrl: true,
-                ..
-            } => self.state = State::Exit,
-
-            Input {
-                key: Key::Char('x'),
-                ctrl: true,
-                ..
-            } => {
-                self.change_textarea();
-            }
-            // GET method
-            Input {
-                key: Key::Char('g'),
-                ctrl: true,
-                ..
-            } => {
-                let client_builder = self.build_client(client, reqwest::Method::GET);
-                tokio::select! {
-                    response = make_request(client_builder) => {
-                        self.set_response(response)
+                        match input {
+                            Input { key: Key::Esc, .. }
+                            | Input {
+                                key: Key::Char('q'),
+                                ctrl: true,
+                                ..
+                            } => {
+                                let _ = cancel_send.send(true);
+                                return Ok(());
+                            }
+                            Input {
+                                key: Key::Char('x'),
+                                ctrl: true,
+                                ..
+                            } => {
+                                self.change_textarea();
+                            }
+                            // GET method
+                            Input {
+                                key: Key::Char('g'),
+                                ctrl: true,
+                                ..
+                            } => {
+                                let client_builder =
+                                    self.build_client(client, reqwest::Method::GET);
+                                let _ = request_tx.send(client_builder.unwrap());
+                                self.state = State::Running
+                            }
+                            // POST method
+                            Input {
+                                key: Key::Char('h'),
+                                ctrl: true,
+                                ..
+                            } => {
+                                let client_builder =
+                                    self.build_client(client, reqwest::Method::POST);
+                                let _ = request_tx.send(client_builder.unwrap());
+                                self.state = State::Running
+                            }
+                            // Paste clipboard contents into the active textarea
+                            Input {
+                                key: Key::Char('l'),
+                                ctrl: true,
+                                ..
+                            } => {
+                                let clip_text = clipboard.get_text().unwrap();
+                                self.textarea[self.which].insert_str(clip_text);
+                            }
+                            // Select textarea contents
+                            Input {
+                                key: Key::Char('k'),
+                                ctrl: true,
+                                ..
+                            } => {
+                                self.textarea[self.which].select_all();
+                            }
+                            _ => self.render_inputs(input),
+                        }
                     }
                 }
-            }
-            // POST method
-            Input {
-                key: Key::Char('h'),
-                ctrl: true,
-                ..
-            } => {
-                let client_builder = self.build_client(client, reqwest::Method::POST);
-                tokio::select! {
-                    response = make_request(client_builder) => {
-                        self.set_response(response)
+                match response_rx.try_recv() {
+                    Ok(res) => {
+                        self.set_response(res);
+                        self.state = State::Idle
                     }
+                    Err(mpsc::error::TryRecvError::Empty) => continue,
+                    Err(mpsc::error::TryRecvError::Disconnected) => {}
                 }
             }
-            // Paste clipboard contents into the active textarea
-            Input {
-                key: Key::Char('l'),
-                ctrl: true,
-                ..
-            } => {
-                let clip_text = clipboard.get_text().unwrap();
-                self.textarea[self.which].insert_str(clip_text);
-            }
-            // Select textarea contents
-            Input {
-                key: Key::Char('k'),
-                ctrl: true,
-                ..
-            } => {
-                self.textarea[self.which].select_all();
-            }
-            _ => self.render_inputs(input),
         }
     }
 
@@ -166,11 +153,53 @@ impl App<'_> {
         f.render_widget(self.textarea[1].widget(), layout.request_layout[1]);
         f.render_widget(response_block, layout.response_layout[0]);
 
+        // If waiting for a response, render a popup
+        if self.state == State::Running {
+            self.render_popup(f);
+        }
+
         if let Some(resp) = &self.response {
             let resp = serde_json::to_string_pretty(resp).unwrap();
             let response_paragraph = utils::create_text(&resp, vec![2, 2, 1, 2]);
             f.render_widget(response_paragraph, layout.response_layout[0])
         }
+    }
+
+    fn render_popup(&mut self, f: &mut Frame) {
+        let popup_block = Block::default()
+            .borders(Borders::ALL)
+            .title("Message")
+            .bold()
+            .light_green();
+
+        let para = Paragraph::new("Processing...").block(popup_block);
+        let area = self.centered_rect(30, 6, f.size());
+
+        f.render_widget(ratatui::widgets::Clear, area);
+        f.render_widget(para, area);
+    }
+
+    /// helper function to create a centered rect using up certain percentage of the available rect `r`
+    fn centered_rect(&self, percent_x: u16, percent_y: u16, r: Rect) -> Rect {
+        // Cut the given rectangle into three vertical pieces
+        let popup_layout = Layout::default()
+            .direction(Direction::Vertical)
+            .constraints([
+                Constraint::Percentage((100 - percent_y) / 2),
+                Constraint::Percentage(percent_y),
+                Constraint::Percentage((100 - percent_y) / 2),
+            ])
+            .split(r);
+
+        // Then cut the middle vertical piece into three width-wise pieces
+        Layout::default()
+            .direction(Direction::Horizontal)
+            .constraints([
+                Constraint::Percentage((100 - percent_x) / 2),
+                Constraint::Percentage(percent_x),
+                Constraint::Percentage((100 - percent_x) / 2),
+            ])
+            .split(popup_layout[1])[1] // Return the middle chunk
     }
 
     pub fn activate_deactivate_textarea(&mut self) {
@@ -208,7 +237,7 @@ impl App<'_> {
         Ok(request_builder)
     }
 
-    fn set_response(&mut self, response: RequestResult) {
+    fn set_response(&mut self, response: ResultSerde) {
         self.response = match response {
             Ok(resp) => Some(resp),
             Err(err) => Some(serde_json::json!({
