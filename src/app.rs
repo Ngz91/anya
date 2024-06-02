@@ -116,14 +116,14 @@ impl App<'_> {
                         }
                     }
                 }
-                match response_rx.try_recv() {
-                    Ok(res) => {
-                        self.set_response(res);
-                        self.state = State::Idle
-                    }
-                    Err(mpsc::error::TryRecvError::Empty) => continue,
-                    Err(mpsc::error::TryRecvError::Disconnected) => {}
+            }
+            match response_rx.try_recv() {
+                Ok(res) => {
+                    self.set_response(res);
+                    self.state = State::Idle
                 }
+                Err(mpsc::error::TryRecvError::Empty) => continue,
+                Err(mpsc::error::TryRecvError::Disconnected) => {}
             }
         }
     }
